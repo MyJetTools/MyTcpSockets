@@ -24,9 +24,10 @@ jobs:
       run: dotnet pack --configuration Release MyTcpSockets/MyTcpSockets.csproj /p:Version=${GITHUB_REF#refs/tags/}
     - name: Create the package - MyTcpSockets20
       run: dotnet pack --configuration Release MyTcpSockets20/MyTcpSockets20.csproj /p:Version=${GITHUB_REF#refs/tags/}
-    - name: Create the package - MyTcpSockets.Extensions
-      run: dotnet pack --configuration Release MyTcpSockets.Extensions/MyTcpSockets.Extensions.csproj /p:Version=${GITHUB_REF#refs/tags/}
-    - name: Create the package - MyTcpSockets20.Extensions
-      run: dotnet pack --configuration Release MyTcpSockets20.Extensions/MyTcpSockets20.Extensions.csproj /p:Version=${GITHUB_REF#refs/tags/}
+
+    - name: Publish the package to GPR - MyTcpSockets
+      run: dotnet nuget push MyTcpSockets/bin/Release/*.nupkg -s "https://api.nuget.org/v3/index.json" -k ${{ secrets.NUGET_TOCKEN }}
+    - name: Publish the package to GPR - MyTcpSockets20
+      run: dotnet nuget push MyTcpSockets20/bin/Release/*.nupkg -s "https://api.nuget.org/v3/index.json" -k ${{ secrets.NUGET_TOCKEN }}
 
       
