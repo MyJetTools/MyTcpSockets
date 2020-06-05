@@ -18,7 +18,7 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release
     - name: Test
-      run: dotnet test --no-build --configuration Release      
+      run: dotnet test --configuration Release      
       
     - name: Create the package - MyTcpSockets
       run: dotnet pack --configuration Release MyTcpSockets/MyTcpSockets.csproj /p:Version=${GITHUB_REF#refs/tags/}
