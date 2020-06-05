@@ -1,6 +1,7 @@
 .idea
 .vscode
 .vs
+.DS_Store
 *.user
 **/*.min.css
 **/*.js.css
