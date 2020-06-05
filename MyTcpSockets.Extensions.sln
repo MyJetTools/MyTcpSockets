@@ -1,0 +1,40 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyTcpSockets.Extensions", "MyTcpSockets.Extensions\MyTcpSockets.Extensions.csproj", "{ADA90CFA-6A2D-4DC5-A011-8E62E148A416}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyTcpSockets.Extensions.Tests", "MyTcpSockets.Extensions.Tests\MyTcpSockets.Extensions.Tests.csproj", "{CDBC86C8-9D93-4EE3-B722-C2E00387EF61}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyTcpSockets20.Extensions", "MyTcpSockets20.Extensions\MyTcpSockets20.Extensions.csproj", "{397AC218-D800-431A-831E-2D2D5CC43B2C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyTcpSockets20.Extensions.Tests", "MyTcpSockets20.Extensions.Tests\MyTcpSockets20.Extensions.Tests.csproj", "{03F5A16C-D9E8-49B5-ABBD-1FB4B5684E18}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "01.Library", "01.Library", "{A7504B43-789A-4201-8D5B-25EA42791471}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{ADA90CFA-6A2D-4DC5-A011-8E62E148A416}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ADA90CFA-6A2D-4DC5-A011-8E62E148A416}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ADA90CFA-6A2D-4DC5-A011-8E62E148A416}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ADA90CFA-6A2D-4DC5-A011-8E62E148A416}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CDBC86C8-9D93-4EE3-B722-C2E00387EF61}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CDBC86C8-9D93-4EE3-B722-C2E00387EF61}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CDBC86C8-9D93-4EE3-B722-C2E00387EF61}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CDBC86C8-9D93-4EE3-B722-C2E00387EF61}.Release|Any CPU.Build.0 = Release|Any CPU
+		{397AC218-D800-431A-831E-2D2D5CC43B2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{397AC218-D800-431A-831E-2D2D5CC43B2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{397AC218-D800-431A-831E-2D2D5CC43B2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{397AC218-D800-431A-831E-2D2D5CC43B2C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{03F5A16C-D9E8-49B5-ABBD-1FB4B5684E18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{03F5A16C-D9E8-49B5-ABBD-1FB4B5684E18}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{03F5A16C-D9E8-49B5-ABBD-1FB4B5684E18}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{03F5A16C-D9E8-49B5-ABBD-1FB4B5684E18}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{ADA90CFA-6A2D-4DC5-A011-8E62E148A416} = {A7504B43-789A-4201-8D5B-25EA42791471}
+		{397AC218-D800-431A-831E-2D2D5CC43B2C} = {A7504B43-789A-4201-8D5B-25EA42791471}
+	EndGlobalSection
+EndGlobal
