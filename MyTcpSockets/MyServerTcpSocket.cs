@@ -13,10 +13,15 @@ namespace MyTcpSockets
         private readonly Connections<TSocketData>_connections;
         private readonly IPEndPoint _ipEndPoint;
         private Action<object> _log;
+        
+        private readonly OutDataSender _outDataSender;
+        
+        private readonly object _lockObject = new object();
 
-        public MyServerTcpSocket(IPEndPoint ipEndPoint)
+        public MyServerTcpSocket(IPEndPoint ipEndPoint, int sendBufferSize = 1024 * 1024)
         {
             _ipEndPoint = ipEndPoint;
+            _outDataSender = new OutDataSender(_lockObject, sendBufferSize);
             _connections = new Connections<TSocketData>();
         }
 
@@ -80,39 +85,37 @@ namespace MyTcpSockets
             }
         }
 
-        private void KickOffNewSocket(TcpContext<TSocketData> tcpContext, TcpClient acceptedSocket)
+        private async Task KickOffNewSocketAsync(TcpContext<TSocketData> tcpContext, TcpClient acceptedSocket)
         {
-            Task.Run(async ()=>
+      
+            try
             {
-                await tcpContext.StartAsync(acceptedSocket, _getSerializer(), _log);  
+                await tcpContext.StartAsync(acceptedSocket, _getSerializer(), _outDataSender, _lockObject, _log);
                 _log?.Invoke($"Socket Accepted; Ip:{acceptedSocket.Client.RemoteEndPoint}. Id=" + tcpContext.Id);
-                _connections.AddSocket(tcpContext);
-                
-                try
-                {
-                    var taskReadLoop =  tcpContext.ReadLoopAsync();
-                    var taskWriteLoop =  tcpContext.WriteLoopAsync();
-                    
-                    await Task.WhenAny(taskReadLoop, taskWriteLoop);
-                }
-                finally
-                {
-                    _log?.Invoke("Removing connection: "+tcpContext.ContextName+" with id:"+tcpContext.Id);
-                    _connections.RemoveSocket(tcpContext);
-                    await tcpContext.DisconnectAsync();
-                }
-                
-            });
+
+                await tcpContext.ReadLoopAsync();
+            }
+            finally
+            {
+                _connections.RemoveSocket(tcpContext.Id);
+                await tcpContext.DisconnectAsync();
+            }
+
         }
-        
+
+
+
         private async Task AcceptSocketLoopAsync()
         {
 
             _serverSocket = new TcpListener(_ipEndPoint);
             _serverSocket.Start();
+
+            _outDataSender.Start();
+
             _log?.Invoke("Started listening tcp socket: " + _ipEndPoint.Port);
             var socketId = 0;
-            
+
 
             while (_working)
             {
@@ -130,7 +133,9 @@ namespace MyTcpSockets
                         throw new Exception("Server is being stopped. Socket accept process is canceled");
                     }
 
-                    KickOffNewSocket(connection, acceptedSocket);
+                    _connections.AddSocket(connection);
+                    var readSocketTask = KickOffNewSocketAsync(connection, acceptedSocket);
+                    PlugDisconnectToReadTask(readSocketTask, connection.Id);
 
                 }
                 catch (Exception ex)
@@ -141,6 +146,14 @@ namespace MyTcpSockets
 
         }
 
+
+        private void PlugDisconnectToReadTask(Task readSocketTask, long socketId)
+        {
+            readSocketTask.ContinueWith(itm =>
+            {
+                _connections.RemoveSocket(socketId);
+            });
+        }
         public IReadOnlyList<TcpContext<TSocketData>> GetConnections(
             Func<TcpContext<TSocketData>, bool> filterCondition = null)
         {
@@ -180,6 +193,7 @@ namespace MyTcpSockets
                 return;
 
             _working = false;
+            _outDataSender.Stop();
             
             _serverSocket.Server.Close(1000);
             _serverSocket.Stop();
@@ -190,6 +204,8 @@ namespace MyTcpSockets
             }
 
             _theTask.Wait();
+            
+            _outDataSender.Stop();
         }
    
 

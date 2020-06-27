@@ -10,16 +10,15 @@ namespace MyTcpSockets
         {
             private readonly Dictionary<long, TcpContext<T>> _sockets = new Dictionary<long, TcpContext<T>>();
 
-            private readonly ReaderWriterLockSlim _lockSlim =
-                new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+            private readonly ReaderWriterLockSlim _lockSlim = new ReaderWriterLockSlim();
 
-            public void RemoveSocket(TcpContext<T> connection)
+            public void RemoveSocket(long connectionId)
             {
                 _lockSlim.EnterWriteLock();
                 try
                 {
-                    if (_sockets.ContainsKey(connection.Id))
-                        _sockets.Remove(connection.Id);
+                    if (_sockets.ContainsKey(connectionId))
+                        _sockets.Remove(connectionId);
                 }
                 finally
                 {
@@ -57,15 +56,15 @@ namespace MyTcpSockets
 
             public IReadOnlyList<TcpContext<T>> GetConnections(Func<TcpContext<T>, bool> condition)
             {
-                    _lockSlim.EnterReadLock();
-                    try
-                    {
-                        return _sockets.Values.Where(condition).ToArray();
-                    }
-                    finally
-                    {
-                        _lockSlim.ExitReadLock();
-                    }
+                _lockSlim.EnterReadLock();
+                try
+                {
+                    return _sockets.Values.Where(condition).ToList();
+                }
+                finally
+                {
+                    _lockSlim.ExitReadLock();
+                }
             }
 
             public int Count

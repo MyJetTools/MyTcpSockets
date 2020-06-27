@@ -15,13 +15,18 @@ namespace MyTcpSockets
         private Func<ClientTcpContext<TSocketData>> _socketContextFactory;
 
         private Func<ITcpSerializer<TSocketData>> _socketSerializerFactory;
+        
+        private readonly OutDataSender _outDataSender;
+
+        private readonly object _lockObject = new object();
 
         private Action<object> _log;
 
         public TimeSpan PingInterval { get; private set; } = TimeSpan.FromSeconds(5);
 
-        public MyClientTcpSocket(Func<string> getHostPort, TimeSpan reconnectTimeOut)
+        public MyClientTcpSocket(Func<string> getHostPort, TimeSpan reconnectTimeOut, int sendBufferSize = 1024*1024)
         {
+            _outDataSender = new OutDataSender(_lockObject, sendBufferSize);
             _getHostPort = getHostPort;
             _reconnectTimeOut = reconnectTimeOut;
         }
@@ -64,7 +69,7 @@ namespace MyTcpSockets
             var clientTcpContext = _socketContextFactory();
             clientTcpContext.Id = socketId;
 
-            await clientTcpContext.StartAsync(tcpClient, _socketSerializerFactory(), _log);
+            await clientTcpContext.StartAsync(tcpClient, _socketSerializerFactory(), _outDataSender, _lockObject, _log);
 
             _log?.Invoke("Connected. Id=" + clientTcpContext.Id);
 
@@ -136,10 +141,9 @@ namespace MyTcpSockets
                         socketId++;
 
                         var readDataTask = CurrentTcpContext.ReadLoopAsync();
-                        var writeLoopTask = CurrentTcpContext.WriteLoopAsync();
                         var pingLoopTask = CheckDeadSocketLoopAsync(CurrentTcpContext);
 
-                        await Task.WhenAny(readDataTask, pingLoopTask, writeLoopTask);
+                        await Task.WhenAny(readDataTask, pingLoopTask);
 
                     }
                     catch (SocketException se)
@@ -178,6 +182,7 @@ namespace MyTcpSockets
                 return;
 
             _working = true;
+            _outDataSender.Start();
             _socketLoop = SocketThread();
         }
 
@@ -188,6 +193,7 @@ namespace MyTcpSockets
             currentTcpContext.DisconnectAsync().AsTask().Wait();
             var socketLoopTask = _socketLoop;
             socketLoopTask?.Wait();
+            _outDataSender.Stop();
 
         }
 
