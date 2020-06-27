@@ -69,7 +69,7 @@ namespace MyTcpSockets
                         {
                             _log.Invoke($"Found dead connection {connection.ContextName} with ID {connection.Id}. Disconnecting...");
                             await connection.DisconnectAsync();
-                            
+                            _connections.RemoveSocket(connection.Id);
                         }
 
                     }
@@ -121,7 +121,6 @@ namespace MyTcpSockets
             {
                 try
                 {
-                    _log?.Invoke("Trying to accept a socket on: ");
                     var acceptedSocket = await _serverSocket.AcceptTcpClientAsync();
                     var connection = _getContext();
                     connection.Id = socketId;

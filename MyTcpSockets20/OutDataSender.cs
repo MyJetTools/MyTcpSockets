@@ -11,7 +11,7 @@ namespace MyTcpSockets
 
         private readonly Dictionary<long, ITcpContext> _socketsWithData = new Dictionary<long, ITcpContext>();
 
-        private readonly List<TaskCompletionSource<int>> _notifyMePlease = new List<TaskCompletionSource<int>>();
+        private TaskCompletionSource<int> _notifyMePlease;
 
         private readonly byte[] _bufferToSend;
 
@@ -26,14 +26,23 @@ namespace MyTcpSockets
 
         private void PushTask()
         {
-            if (_notifyMePlease.Count > 0)
+            if (_notifyMePlease == null)
+                return;
+
+            try
             {
-                foreach (var taskCompletionSource in _notifyMePlease)
-                    taskCompletionSource.SetResult(0);
-                    
-                _notifyMePlease.Clear();
+                var task = _notifyMePlease;
+                _notifyMePlease = null;
+                task.SetResult(0);
             }
+            catch (Exception e)
+            {
+                Console.WriteLine("Warning: set result to send task");
+                Console.WriteLine(e);
+            }
+            
         }
+
         public void EnqueueSendData(ITcpContext tcpContext, ReadOnlyMemory<byte> dataToSend)
         {
             lock (_lockObject)
@@ -52,12 +61,11 @@ namespace MyTcpSockets
         {
             lock (_lockObject)
             {
-                if (_socketsWithData.Count>0)
+                if (_socketsWithData.Count > 0)
                     return Task.CompletedTask;
-                
-                var result = new TaskCompletionSource<int>();
-                _notifyMePlease.Add(result);
-                return result.Task;
+
+                _notifyMePlease = new TaskCompletionSource<int>();
+                return _notifyMePlease.Task;
             }
         }
 
@@ -67,28 +75,31 @@ namespace MyTcpSockets
             lock (_lockObject)
             {
 
-
                 while (_socketsWithData.Count>0)
                 {
                 
                     var itm = _socketsWithData.First();
 
-                    if (!itm.Value.Connected)
+                    var socketId = itm.Key;
+                    var tcpContext = itm.Value;
+
+                    if (!tcpContext.Connected)
                     {
-                        itm.Value.DataToSend.Clear();
-                        _socketsWithData.Remove(itm.Key);
+                        Console.WriteLine("Skipping sending to Disconnected socket: "+socketId);
+                        tcpContext.DataToSend.Clear();
+                        _socketsWithData.Remove(socketId);
                         continue;
                     }
                 
-                    var dataToSend = itm.Value.CompileDataToSend(_bufferToSend);
+                    var dataToSend = tcpContext.CompileDataToSend(_bufferToSend);
 
-                    if (itm.Value.DataToSend.Count == 0)
-                        _socketsWithData.Remove(itm.Key);
-
-                    return (itm.Value, dataToSend); 
-                }
+                    if (tcpContext.DataToSend.Count == 0)
+                        _socketsWithData.Remove(socketId);
                 
-         
+                    return (tcpContext, dataToSend); 
+                }
+
+
             }
             
             return (null, null);
@@ -100,7 +111,6 @@ namespace MyTcpSockets
             while (Working)
             {
                 await WaitNewDataAsync();
-
                 var (tcpContext, dataToSend) = GetNextSocketToSendData();
                 while (tcpContext != null)
                 {
@@ -112,7 +122,6 @@ namespace MyTcpSockets
                     {
                         await tcpContext.DisconnectAsync();
                     }
-                    
                     (tcpContext, dataToSend) = GetNextSocketToSendData();    
                 }
 
@@ -124,6 +133,8 @@ namespace MyTcpSockets
 
         public void Start()
         {
+            Working = true;
+
             _task = WriteThreadAsync();
         }
 

@@ -69,7 +69,7 @@ namespace MyTcpSockets
                         {
                             _log.Invoke($"Found dead connection {connection.ContextName} with ID {connection.Id}. Disconnecting...");
                             await connection.DisconnectAsync();
-                            
+                            _connections.RemoveSocket(connection.Id);
                         }
 
                     }
@@ -100,7 +100,7 @@ namespace MyTcpSockets
                 finally
                 {
                     _log?.Invoke("Removing connection: "+tcpContext.ContextName+" with id:"+tcpContext.Id);
-                    _connections.RemoveSocket(tcpContext);
+                    _connections.RemoveSocket(tcpContext.Id);
                     await tcpContext.DisconnectAsync();
                 }
                 

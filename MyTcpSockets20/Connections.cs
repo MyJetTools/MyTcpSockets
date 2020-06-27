@@ -13,13 +13,13 @@ namespace MyTcpSockets
             private readonly ReaderWriterLockSlim _lockSlim =
                 new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 
-            public void RemoveSocket(TcpContext<T> connection)
+            public void RemoveSocket(long socketId)
             {
                 _lockSlim.EnterWriteLock();
                 try
                 {
-                    if (_sockets.ContainsKey(connection.Id))
-                        _sockets.Remove(connection.Id);
+                    if (_sockets.ContainsKey(socketId))
+                        _sockets.Remove(socketId);
                 }
                 finally
                 {

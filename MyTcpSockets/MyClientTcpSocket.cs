@@ -20,7 +20,7 @@ namespace MyTcpSockets
         private readonly object _lockObject = new object();
         
         private Action<object> _log;
-
+        
         public TimeSpan PingInterval { get; private set; } = TimeSpan.FromSeconds(5);
 
         public MyClientTcpSocket(Func<string> getHostPort, TimeSpan reconnectTimeOut, int sendBufferSize = 1024*1024)
@@ -165,6 +165,7 @@ namespace MyTcpSockets
         }
 
         private Task _socketLoop;
+        
         public void Start()
         {
 
