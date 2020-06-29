@@ -71,30 +71,41 @@ namespace MyTcpSockets
         }
 
 
+
+        private void CleanDisconnectedSocket(ITcpContext ctx)
+        {
+            ctx.DataToSend.Clear();
+            _socketsWithData.Remove(ctx.Id);
+        }
+
         private (ITcpContext tcpContext, ReadOnlyMemory<byte> dataToSend) GetNextSocketToSendData()
         {
             lock (_lockObject)
             {
-
                 while (_socketsWithData.Count>0)
                 {
-                
-                    var (socketId, tcpContext) = _socketsWithData.First();
-
-                    if (!tcpContext.Connected)
+                    try
                     {
-                        Console.WriteLine("Skipping sending to Disconnected socket: "+socketId);
-                        tcpContext.DataToSend.Clear();
-                        _socketsWithData.Remove(socketId);
-                        continue;
-                    }
-                
-                    var dataToSend = tcpContext.CompileDataToSend(_bufferToSend);
+                        var (socketId, tcpContext) = _socketsWithData.First();
 
-                    if (tcpContext.DataToSend.Count == 0)
-                        _socketsWithData.Remove(socketId);
+                        if (!tcpContext.Connected)
+                        {
+                            Console.WriteLine("Skipping sending to Disconnected socket: "+socketId);
+                            CleanDisconnectedSocket(tcpContext);
+                            continue;
+                        }
                 
-                    return (tcpContext, dataToSend); 
+                        var dataToSend = tcpContext.CompileDataToSend(_bufferToSend);
+
+                        if (tcpContext.DataToSend.Count == 0)
+                            _socketsWithData.Remove(socketId);
+                
+                        return (tcpContext, dataToSend); 
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                    }
                 }
 
 
@@ -119,7 +130,11 @@ namespace MyTcpSockets
                     catch (Exception)
                     {
                         await tcpContext.DisconnectAsync();
+
+                        lock (_lockObject)
+                            CleanDisconnectedSocket(tcpContext);
                     }
+
                     (tcpContext, dataToSend) = GetNextSocketToSendData();    
                 }
 
