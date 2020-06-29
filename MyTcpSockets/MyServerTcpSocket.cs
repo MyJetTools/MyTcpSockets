@@ -69,7 +69,6 @@ namespace MyTcpSockets
                         {
                             _log.Invoke($"Found dead connection {connection.ContextName} with ID {connection.Id}. Disconnecting...");
                             await connection.DisconnectAsync();
-                            _connections.RemoveSocket(connection.Id);
                         }
 
                     }
@@ -90,14 +89,18 @@ namespace MyTcpSockets
       
             try
             {
-                await tcpContext.StartAsync(acceptedSocket, _getSerializer(), _outDataSender, _lockObject, _log);
+                await tcpContext.StartAsync(acceptedSocket, _getSerializer(), _outDataSender, _lockObject, _log,
+                    socket =>
+                    {
+                        _connections.RemoveSocket(socket.Id);
+                    });
+                
                 _log?.Invoke($"Socket Accepted; Ip:{acceptedSocket.Client.RemoteEndPoint}. Id=" + tcpContext.Id);
 
                 await tcpContext.ReadLoopAsync();
             }
             finally
             {
-                _connections.RemoveSocket(tcpContext.Id);
                 await tcpContext.DisconnectAsync();
             }
 

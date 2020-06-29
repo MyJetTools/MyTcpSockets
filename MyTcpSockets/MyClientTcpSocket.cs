@@ -68,7 +68,7 @@ namespace MyTcpSockets
             var clientTcpContext = _socketContextFactory();
             clientTcpContext.Id = socketId;
 
-            await clientTcpContext.StartAsync(tcpClient, _socketSerializerFactory(), _outDataSender, _lockObject, _log);
+            await clientTcpContext.StartAsync(tcpClient, _socketSerializerFactory(), _outDataSender, _lockObject, _log, null);
 
             _log?.Invoke("Connected. Id=" + clientTcpContext.Id);
 

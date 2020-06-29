@@ -39,6 +39,18 @@ namespace MyTcpSockets
 
         public ValueTask DisconnectAsync()
         {
+            if (_disconnectedCallback != null)
+            {
+                try
+                {
+                    _disconnectedCallback(this);
+                }
+                catch (Exception e)
+                {
+                    WriteLog("SocketStream._disconnectedCallback() "+e);
+                }
+            }
+            
             lock (_lockObject)
             {
                 if (!Connected)
@@ -47,7 +59,7 @@ namespace MyTcpSockets
                 Connected = false;
             }
             WriteLog($"Socket {ContextName} is Disconnected with Ip:{TcpClient.Client.RemoteEndPoint}. Id=" + Id);
-    
+            
             try
             {
                 SocketStatistic.WeHaveDisconnect();
@@ -142,6 +154,9 @@ namespace MyTcpSockets
         
         public void SendPacket(TSocketData data)
         {
+            if (!Connected)
+                return;
+            
             var dataToSend = TcpSerializer.Serialize(data);
             _outDataSender.EnqueueSendData(this, dataToSend);
         }
@@ -151,7 +166,6 @@ namespace MyTcpSockets
             try
             {
                 await OnDisconnectAsync();
-
             }
             catch (Exception e)
             {
@@ -179,8 +193,11 @@ namespace MyTcpSockets
             _log?.Invoke(data);
         }
 
-        internal ValueTask StartAsync(TcpClient tcpClient, ITcpSerializer<TSocketData> tcpSerializer, OutDataSender outDataSender, object lockObject, Action<object> log)
+        private Action<ITcpContext> _disconnectedCallback;
+
+        internal ValueTask StartAsync(TcpClient tcpClient, ITcpSerializer<TSocketData> tcpSerializer, OutDataSender outDataSender, object lockObject, Action<object> log, Action<ITcpContext> disconnectedCallback)
         {
+            _disconnectedCallback = disconnectedCallback;
             _lockObject = lockObject;
             _outDataSender = outDataSender;
             TcpClient = tcpClient;
