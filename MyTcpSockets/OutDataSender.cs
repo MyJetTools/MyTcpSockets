@@ -21,6 +21,13 @@ namespace MyTcpSockets
             _lockObject = lockObject;
             _bufferToSend = new byte[maxPacketSize];
         }
+
+        private Action<ITcpContext, object> _log;
+
+        public void RegisterLog(Action<ITcpContext, object> log)
+        {
+            _log = log;
+        }
         
         private bool Working { get; set; }
 
@@ -38,8 +45,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                Console.WriteLine("Warning: set result to send task");
-                Console.WriteLine(e);
+                _log?.Invoke(null, e);
             }
 
         }
@@ -104,7 +110,7 @@ namespace MyTcpSockets
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine(e);
+                        _log?.Invoke(null, e);
                     }
                 }
 
@@ -127,10 +133,11 @@ namespace MyTcpSockets
                     {
                         await tcpContext.SocketStream.WriteAsync(dataToSend);
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
+                        _log?.Invoke(tcpContext, e);
+                        
                         await tcpContext.DisconnectAsync();
-
                         lock (_lockObject)
                             CleanDisconnectedSocket(tcpContext);
                     }

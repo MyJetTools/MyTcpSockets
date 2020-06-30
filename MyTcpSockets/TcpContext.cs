@@ -19,7 +19,6 @@ namespace MyTcpSockets
         long Id { get; }
         
         bool Connected { get; } 
-
     }
     
     

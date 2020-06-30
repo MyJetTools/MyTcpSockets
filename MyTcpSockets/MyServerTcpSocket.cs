@@ -29,6 +29,7 @@ namespace MyTcpSockets
         public MyServerTcpSocket<TSocketData> AddLog(Action<ITcpContext, object> log)
         {
             _log = log;
+            _outDataSender.RegisterLog(log);
             return this;
         } 
 

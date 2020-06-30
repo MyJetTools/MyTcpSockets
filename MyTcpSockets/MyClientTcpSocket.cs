@@ -33,6 +33,7 @@ namespace MyTcpSockets
         public MyClientTcpSocket<TSocketData> AddLog(Action<ITcpContext, object> log)
         {
             _log = log;
+            _outDataSender.RegisterLog(log);
             return this;
         }
 
@@ -40,6 +41,7 @@ namespace MyTcpSockets
             Func<ClientTcpContext<TSocketData>> socketContextFactory)
         {
             _socketContextFactory = socketContextFactory;
+            
             return this;
         }
 
