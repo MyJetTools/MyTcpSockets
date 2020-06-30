@@ -161,7 +161,7 @@ namespace MyTcpSockets
                     }
                 }
 
-                _log?.Invoke(null, "Timeout: "+_reconnectTimeOut.ToString("g"));
+                _log?.Invoke(null, "Making reconnection timeout: "+_reconnectTimeOut.ToString("g"));
                 await Task.Delay(_reconnectTimeOut);
             }
 
