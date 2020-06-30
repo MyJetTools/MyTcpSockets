@@ -33,7 +33,7 @@ namespace MyTcpSockets
             try
             {
                 var task = _notifyMePlease;
-                _notifyMePlease = null;
+                _notifyMePlease = null; 
                 task.SetResult(0);
             }
             catch (Exception e)
@@ -41,7 +41,7 @@ namespace MyTcpSockets
                 Console.WriteLine("Warning: set result to send task");
                 Console.WriteLine(e);
             }
-            
+
         }
 
         public void EnqueueSendData(ITcpContext tcpContext, ReadOnlyMemory<byte> dataToSend)

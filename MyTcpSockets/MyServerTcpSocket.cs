@@ -12,7 +12,7 @@ namespace MyTcpSockets
 
         private readonly Connections<TSocketData>_connections;
         private readonly IPEndPoint _ipEndPoint;
-        private Action<object> _log;
+        private Action<ITcpContext, object> _log;
         
         private readonly OutDataSender _outDataSender;
         
@@ -26,7 +26,7 @@ namespace MyTcpSockets
         }
 
 
-        public MyServerTcpSocket<TSocketData> AddLog(Action<object> log)
+        public MyServerTcpSocket<TSocketData> AddLog(Action<ITcpContext, object> log)
         {
             _log = log;
             return this;
@@ -57,7 +57,7 @@ namespace MyTcpSockets
                 var now = DateTime.UtcNow;
                 var connections =
                     _connections.GetAllConnections();
-
+                
 
                 foreach (var connection in connections)
                 {
@@ -67,14 +67,14 @@ namespace MyTcpSockets
 
                         if ((now - connection.SocketStatistic.LastReceiveTime).TotalMinutes >= 1)
                         {
-                            _log.Invoke($"Found dead connection {connection.ContextName} with ID {connection.Id}. Disconnecting...");
+                            _log.Invoke(connection, $"Found dead connection {connection.ContextName} with ID {connection.Id}. Disconnecting...");
                             await connection.DisconnectAsync();
                         }
 
                     }
                     catch (Exception e)
                     {
-                        _log.Invoke(e);
+                        _log.Invoke(connection, e);
                     }
                     
                 }
@@ -95,7 +95,7 @@ namespace MyTcpSockets
                         _connections.RemoveSocket(socket.Id);
                     });
                 
-                _log?.Invoke($"Socket Accepted; Ip:{acceptedSocket.Client.RemoteEndPoint}. Id=" + tcpContext.Id);
+                _log?.Invoke(tcpContext, $"Socket Accepted; Ip:{acceptedSocket.Client.RemoteEndPoint}. Id=" + tcpContext.Id);
 
                 await tcpContext.ReadLoopAsync();
             }
@@ -116,7 +116,7 @@ namespace MyTcpSockets
 
             _outDataSender.Start();
 
-            _log?.Invoke("Started listening tcp socket: " + _ipEndPoint.Port);
+            _log?.Invoke(null, "Started listening tcp socket: " + _ipEndPoint.Port);
             var socketId = 0;
 
 
@@ -142,7 +142,7 @@ namespace MyTcpSockets
                 }
                 catch (Exception ex)
                 {
-                    _log?.Invoke("Error accepting socket: " + ex.Message);
+                    _log?.Invoke(null, "Error accepting socket: " + ex.Message);
                 }
             }
 

@@ -69,6 +69,8 @@ namespace MyTcpSockets
                 WriteLog("SocketStatistic Disconnect: "+e);
             }
             
+            var result = ProcessOnDisconnectAsync();
+            
             try
             {
                 SocketStream.Close();
@@ -85,9 +87,9 @@ namespace MyTcpSockets
             catch (Exception e)
             {
                 WriteLog("TcpClient.Close(). "+e);
-            }               
+            }
 
-            return ProcessOnDisconnectAsync();
+            return result;
 
         }
         
@@ -186,16 +188,16 @@ namespace MyTcpSockets
         public bool Connected { get; private set; }
 
 
-        private Action<object> _log;
+        private Action<ITcpContext, object> _log;
 
         protected void WriteLog(object data)
         {
-            _log?.Invoke(data);
+            _log?.Invoke(this, data);
         }
 
         private Action<ITcpContext> _disconnectedCallback;
 
-        internal ValueTask StartAsync(TcpClient tcpClient, ITcpSerializer<TSocketData> tcpSerializer, OutDataSender outDataSender, object lockObject, Action<object> log, Action<ITcpContext> disconnectedCallback)
+        internal ValueTask StartAsync(TcpClient tcpClient, ITcpSerializer<TSocketData> tcpSerializer, OutDataSender outDataSender, object lockObject, Action<ITcpContext, object> log, Action<ITcpContext> disconnectedCallback)
         {
             _disconnectedCallback = disconnectedCallback;
             _lockObject = lockObject;
