@@ -149,6 +149,7 @@ namespace MyTcpSockets
             }
             finally
             {
+                WriteLog("Disconnected from ReadLoopAsync");
                 await DisconnectAsync();
             }
         }

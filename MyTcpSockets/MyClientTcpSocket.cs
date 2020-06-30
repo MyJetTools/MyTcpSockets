@@ -148,9 +148,7 @@ namespace MyTcpSockets
                         CurrentTcpContext = await ConnectAsync(ipEndPoint, socketId);
                         socketId++;
 
-                        var readDataTask = CurrentTcpContext.ReadLoopAsync();
-
-                        await readDataTask;
+                        await CurrentTcpContext.ReadLoopAsync();
                     }
                     catch (Exception ex)
                     {
@@ -163,6 +161,7 @@ namespace MyTcpSockets
                     }
                 }
 
+                _log?.Invoke(null, "Timeout: "+_reconnectTimeOut.ToString("g"));
                 await Task.Delay(_reconnectTimeOut);
             }
 
