@@ -122,7 +122,9 @@ namespace MyTcpSockets
                 var message = "Long time [" + receiveInterval +
                               "] no received activity. Disconnecting socket " + connection.ContextName;
                 _log?.Invoke(connection, message);
-                throw new Exception(message);
+
+                await connection.DisconnectAsync();
+                return;
             }
 
             if (DateTime.UtcNow - lastSendPingTime > PingInterval)
@@ -156,6 +158,8 @@ namespace MyTcpSockets
                     {
                         _log?.Invoke(CurrentTcpContext, "Connection support exception:" + ex.Message);
                         _log?.Invoke(CurrentTcpContext, ex);
+
+                    
                     }
                     finally
                     {

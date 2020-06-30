@@ -119,8 +119,8 @@ namespace MyTcpSockets
 
             if (readSize == 0)
             {
-                await trafficReader.StopAsync();
                 WriteLog("Disconnected from Traffic Reader Loop");
+                await trafficReader.StopAsync();
             }
         }
         
@@ -191,7 +191,15 @@ namespace MyTcpSockets
 
         protected void WriteLog(object data)
         {
-            _log?.Invoke(this, data);
+            try
+            {
+                _log?.Invoke(this, data);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+        
         }
 
         private Action<ITcpContext> _disconnectedCallback;
