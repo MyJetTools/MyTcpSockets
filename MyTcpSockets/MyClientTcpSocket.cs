@@ -18,12 +18,12 @@ namespace MyTcpSockets
         private readonly OutDataSender _outDataSender;
 
         private readonly object _lockObject = new object();
-        
+
         private Action<ITcpContext, object> _log;
-        
+
         public TimeSpan PingInterval { get; private set; } = TimeSpan.FromSeconds(5);
 
-        public MyClientTcpSocket(Func<string> getHostPort, TimeSpan reconnectTimeOut, int sendBufferSize = 1024*1024)
+        public MyClientTcpSocket(Func<string> getHostPort, TimeSpan reconnectTimeOut, int sendBufferSize = 1024 * 1024)
         {
             _outDataSender = new OutDataSender(_lockObject, sendBufferSize);
             _getHostPort = getHostPort;
@@ -36,7 +36,8 @@ namespace MyTcpSockets
             return this;
         }
 
-        public MyClientTcpSocket<TSocketData> RegisterTcpContextFactory(Func<ClientTcpContext<TSocketData>> socketContextFactory)
+        public MyClientTcpSocket<TSocketData> RegisterTcpContextFactory(
+            Func<ClientTcpContext<TSocketData>> socketContextFactory)
         {
             _socketContextFactory = socketContextFactory;
             return this;
@@ -48,7 +49,8 @@ namespace MyTcpSockets
             return this;
         }
 
-        public MyClientTcpSocket<TSocketData> RegisterTcpSerializerFactory(Func<ITcpSerializer<TSocketData>> socketSerializerFactory)
+        public MyClientTcpSocket<TSocketData> RegisterTcpSerializerFactory(
+            Func<ITcpSerializer<TSocketData>> socketSerializerFactory)
         {
             _socketSerializerFactory = socketSerializerFactory;
             return this;
@@ -59,7 +61,6 @@ namespace MyTcpSockets
 
         private async Task<ClientTcpContext<TSocketData>> ConnectAsync(IPEndPoint ipEndPoint, long socketId)
         {
-
             _log?.Invoke(null, "Attempt To Connect:" + ipEndPoint.Address + ":" + ipEndPoint.Port);
 
             var tcpClient = new TcpClient();
@@ -68,7 +69,12 @@ namespace MyTcpSockets
             var clientTcpContext = _socketContextFactory();
             clientTcpContext.Id = socketId;
 
-            await clientTcpContext.StartAsync(tcpClient, _socketSerializerFactory(), _outDataSender, _lockObject, _log, null);
+            await clientTcpContext.StartAsync(tcpClient,
+                _socketSerializerFactory(),
+                _outDataSender,
+                _lockObject,
+                _log,
+                null);
 
             _log?.Invoke(clientTcpContext, "Connected. Id=" + clientTcpContext.Id);
 
@@ -76,58 +82,63 @@ namespace MyTcpSockets
 
         }
 
-        private async Task CheckDeadSocketLoopAsync(ClientTcpContext<TSocketData> connection)
+
+        private async Task DeadSocketLoopAsync()
+        {
+            while (_working)
+            {
+                var currentSocket = CurrentTcpContext;
+
+                if (currentSocket != null)
+                {
+                    try
+                    {
+                        if (currentSocket.Connected)
+                            await CheckDeadSocketAsync(currentSocket);
+                    }
+                    catch (Exception e)
+                    {
+                        _log?.Invoke(currentSocket, e);
+                    }
+                }
+
+                await Task.Delay(1000);
+            }
+        }
+
+        private async Task CheckDeadSocketAsync(ClientTcpContext<TSocketData> connection)
         {
 
             var lastSendPingTime = DateTime.UtcNow;
 
-            try
+            connection.SocketStatistic.EachSecondTimer();
+
+            var receiveInterval = DateTime.UtcNow - connection.SocketStatistic.LastReceiveTime;
+
+            if (receiveInterval > PingInterval * 3)
             {
-                while (connection.Connected)
-                {
-                    await Task.Delay(1000);
-
-                    connection.SocketStatistic.EachSecondTimer();
-
-                    var receiveInterval = DateTime.UtcNow - connection.SocketStatistic.LastReceiveTime;
-
-                    if (receiveInterval > PingInterval * 3)
-                    {
-                        var message = "Long time [" + receiveInterval +
-                                      "] no received activity. Disconnecting socket " + connection.ContextName;
-                        _log?.Invoke(connection, message);
-                        throw new Exception(message);
-                    }
-
-                    if (DateTime.UtcNow - lastSendPingTime > PingInterval)
-                    {
-                        await connection.SendPingAsync();
-                        lastSendPingTime = DateTime.UtcNow;
-                    }
-                }
+                var message = "Long time [" + receiveInterval +
+                              "] no received activity. Disconnecting socket " + connection.ContextName;
+                _log?.Invoke(connection, message);
+                throw new Exception(message);
             }
-            catch (Exception exception)
+
+            if (DateTime.UtcNow - lastSendPingTime > PingInterval)
             {
-                _log?.Invoke(connection, $"Socket {connection.Id} Ping Thread Exception: " + exception.Message);
-            }
-            finally
-            {
-                await connection.DisconnectAsync(); 
+                await connection.SendPingAsync();
             }
         }
-
-
 
 
         public ClientTcpContext<TSocketData> CurrentTcpContext { get; private set; }
 
         private async Task SocketThread()
         {
+            var checkConnectionsTask = DeadSocketLoopAsync();
 
             long socketId = 0;
             while (_working)
             {
-
                 var ipEndPoints = await _getHostPort().ParseAndResolveHostPort();
 
                 foreach (var ipEndPoint in ipEndPoints)
@@ -138,19 +149,12 @@ namespace MyTcpSockets
                         socketId++;
 
                         var readDataTask = CurrentTcpContext.ReadLoopAsync();
-                        var pingLoopTask = CheckDeadSocketLoopAsync(CurrentTcpContext);
 
                         await readDataTask;
-                        await pingLoopTask;
-
-                    }
-                    catch (SocketException se)
-                    {
-                        _log?.Invoke(CurrentTcpContext, "Connection support exception: " + se);
                     }
                     catch (Exception ex)
                     {
-                        _log?.Invoke(CurrentTcpContext, "Connection support fatal exception:" + ex);
+                        _log?.Invoke(CurrentTcpContext, "Connection support exception:" + ex.Message);
                         _log?.Invoke(CurrentTcpContext, ex);
                     }
                     finally
@@ -162,6 +166,8 @@ namespace MyTcpSockets
                 await Task.Delay(_reconnectTimeOut);
             }
 
+            await checkConnectionsTask;
+            
         }
 
         private Task _socketLoop;

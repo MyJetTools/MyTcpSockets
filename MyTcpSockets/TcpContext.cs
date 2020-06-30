@@ -121,7 +121,7 @@ namespace MyTcpSockets
             if (readSize == 0)
             {
                 await trafficReader.StopAsync();
-                throw new Exception("Disconnected");
+                WriteLog("Disconnected from Traffic Reader Loop");
             }
         }
         
@@ -130,7 +130,6 @@ namespace MyTcpSockets
 
         internal async Task ReadLoopAsync()
         {
-
             try
             {
                 var trafficReader = new TcpDataReader();
@@ -144,14 +143,14 @@ namespace MyTcpSockets
                         await HandleIncomingDataAsync(incomingDataPacket);
                     }
                 }
-
+                
                 await trafficWriterTask;
+                
             }
             finally
             {
                 await DisconnectAsync();
             }
-
         }
         
         public void SendPacket(TSocketData data)

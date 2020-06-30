@@ -57,7 +57,6 @@ namespace MyTcpSockets
                 var now = DateTime.UtcNow;
                 var connections =
                     _connections.GetAllConnections();
-                
 
                 foreach (var connection in connections)
                 {
