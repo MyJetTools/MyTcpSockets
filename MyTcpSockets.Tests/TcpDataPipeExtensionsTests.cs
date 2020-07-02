@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using NUnit.Framework;
 
 namespace MyTcpSockets.Extensions.Tests
@@ -14,8 +15,9 @@ namespace MyTcpSockets.Extensions.Tests
             var tcpDataReader = new TcpDataReader();
             
             tcpDataReader.NewPackage(data);
-
-            var result = tcpDataReader.ReadByteAsync().Result;
+            
+            var token = new CancellationTokenSource();
+            var result = tcpDataReader.ReadByteAsync(token.Token).Result;
             
             Assert.AreEqual(1, result);
         }
@@ -31,7 +33,8 @@ namespace MyTcpSockets.Extensions.Tests
             
             tcpDataReader.NewPackage(data);
 
-            var result = tcpDataReader.ReadUShortAsync().Result;
+            var token = new CancellationTokenSource();
+            var result = tcpDataReader.ReadUShortAsync(token.Token).Result;
             
             Assert.AreEqual(testValue, result);
         }   
@@ -46,8 +49,8 @@ namespace MyTcpSockets.Extensions.Tests
             var tcpDataReader = new TcpDataReader();
             
             tcpDataReader.NewPackage(data);
-
-            var result = tcpDataReader.ReadShortAsync().Result;
+            var token = new CancellationTokenSource();
+            var result = tcpDataReader.ReadShortAsync(token.Token).Result;
             
             Assert.AreEqual(testValue, result);
         }  
@@ -62,8 +65,8 @@ namespace MyTcpSockets.Extensions.Tests
             var tcpDataReader = new TcpDataReader();
             
             tcpDataReader.NewPackage(data);
-
-            var result = tcpDataReader.ReadUIntAsync().Result;
+            var token = new CancellationTokenSource();
+            var result = tcpDataReader.ReadUIntAsync(token.Token).Result;
             
             Assert.AreEqual(testValue, result);
         }   
@@ -78,8 +81,9 @@ namespace MyTcpSockets.Extensions.Tests
             var tcpDataReader = new TcpDataReader();
             
             tcpDataReader.NewPackage(data);
-
-            var result = tcpDataReader.ReadIntAsync().Result;
+            
+            var token = new CancellationTokenSource();
+            var result = tcpDataReader.ReadIntAsync(token.Token).Result;
             
             Assert.AreEqual(testValue, result);
         }        
@@ -95,8 +99,8 @@ namespace MyTcpSockets.Extensions.Tests
             var tcpDataReader = new TcpDataReader();
             
             tcpDataReader.NewPackage(data);
-
-            var result = tcpDataReader.ReadULongAsync().Result;
+            var token = new CancellationTokenSource();
+            var result = tcpDataReader.ReadULongAsync(token.Token).Result;
             
             Assert.AreEqual(testValue, result);
         }   
@@ -111,8 +115,8 @@ namespace MyTcpSockets.Extensions.Tests
             var tcpDataReader = new TcpDataReader();
             
             tcpDataReader.NewPackage(data);
-
-            var result = tcpDataReader.ReadLongAsync().Result;
+            var token = new CancellationTokenSource();
+            var result = tcpDataReader.ReadLongAsync(token.Token).Result;
             
             Assert.AreEqual(testValue, result);
         } 
@@ -129,8 +133,8 @@ namespace MyTcpSockets.Extensions.Tests
             var tcpDataReader = new TcpDataReader();
             
             tcpDataReader.NewPackage(memoryStream.ToArray());
-
-            var result = tcpDataReader.ReadPascalStringAsync().Result;
+            var token = new CancellationTokenSource();
+            var result = tcpDataReader.ReadPascalStringAsync(token.Token).Result;
             
             Assert.AreEqual(testValue, result);
         } 
@@ -146,8 +150,8 @@ namespace MyTcpSockets.Extensions.Tests
             var tcpDataReader = new TcpDataReader();
             
             tcpDataReader.NewPackage(memoryStream.ToArray());
-
-            var result = tcpDataReader.ReadStringAsync().Result;
+            var token = new CancellationTokenSource();
+            var result = tcpDataReader.ReadStringAsync(token.Token).Result;
             
             Assert.AreEqual(testValue, result);
         }      
@@ -163,8 +167,8 @@ namespace MyTcpSockets.Extensions.Tests
             var tcpDataReader = new TcpDataReader();
             
             tcpDataReader.NewPackage(memoryStream.ToArray());
-
-            var result = tcpDataReader.ReadByteArrayAsync().Result;
+            var token = new CancellationTokenSource();
+            var result = tcpDataReader.ReadByteArrayAsync(token.Token).Result;
 
             testValue.AsReadOnlyMemory().ArraysAreEqual(result);
         } 

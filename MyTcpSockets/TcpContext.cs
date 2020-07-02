@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using MyTcpSockets.Extensions;
 
@@ -58,9 +59,19 @@ namespace MyTcpSockets
                 Connected = false;
             }
             WriteLog($"Socket {ContextName} is Disconnected with Ip:{TcpClient.Client.RemoteEndPoint}. Id=" + Id);
+
+            try
+            {
+                _cancellationToken.Cancel(true);
+            }
+            catch (Exception e)
+            {
+                WriteLog(" _cancellationToken.Cancel(): "+e);
+            }
             
             try
             {
+          
                 SocketStatistic.WeHaveDisconnect();
             }
             catch (Exception e)
@@ -96,32 +107,42 @@ namespace MyTcpSockets
         protected abstract ValueTask OnConnectAsync();
         protected abstract ValueTask OnDisconnectAsync();
         protected abstract ValueTask HandleIncomingDataAsync(TSocketData data);
+        
+        private readonly CancellationTokenSource _cancellationToken = new CancellationTokenSource();
 
 
         private async Task PublishDataToTrafficReaderAsync(TcpDataReader trafficReader)
         {
-            var socketBuffer = new byte[TcpSerializer.BufferSize];
-            
-            var readSize =
-                await SocketStream.ReadAsync(socketBuffer, 0, socketBuffer.Length);
-                    
-            while (readSize > 0)
+
+            try
             {
-                SocketStatistic.WeHaveReceiveEvent(readSize);
+                var socketBuffer = new byte[TcpSerializer.BufferSize];
 
-                trafficReader.NewPackage(socketBuffer, readSize);
+                var readSize =
+                    await SocketStream.ReadAsync(socketBuffer, 0, socketBuffer.Length, _cancellationToken.Token);
 
-                socketBuffer = new byte[TcpSerializer.BufferSize];
+                while (readSize > 0)
+                {
+                    SocketStatistic.WeHaveReceiveEvent(readSize);
 
-                readSize =
-                    await SocketStream.ReadAsync(socketBuffer, 0, socketBuffer.Length);
+                    trafficReader.NewPackage(socketBuffer, readSize);
+
+                    socketBuffer = new byte[TcpSerializer.BufferSize];
+
+                    readSize =
+                        await SocketStream.ReadAsync(socketBuffer, 0, socketBuffer.Length, _cancellationToken.Token);
+                }
             }
-
-            if (readSize == 0)
+            catch (Exception e)
+            {
+                WriteLog(e);
+            }
+            finally
             {
                 WriteLog("Disconnected from Traffic Reader Loop");
                 await trafficReader.StopAsync();
             }
+
         }
         
         
@@ -137,7 +158,7 @@ namespace MyTcpSockets
                 
                 while (TcpClient.Connected)
                 {
-                    await foreach (var incomingDataPacket in TcpSerializer.DeserializeAsync(trafficReader))
+                    await foreach (var incomingDataPacket in TcpSerializer.DeserializeAsync(trafficReader, _cancellationToken.Token))
                     {
                         await HandleIncomingDataAsync(incomingDataPacket);
                     }

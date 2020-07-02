@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -85,32 +86,28 @@ namespace MyTcpSockets
         }
 
 
-        private async Task DeadSocketLoopAsync()
+        private async Task RunDeadSocketDetectionAsync(ClientTcpContext<TSocketData> currentSocket)
         {
-            while (_working)
+            while (currentSocket.Connected)
             {
-                var currentSocket = CurrentTcpContext;
-
-                if (currentSocket != null)
+                try
                 {
-                    try
-                    {
-                        if (currentSocket.Connected)
-                            await CheckDeadSocketAsync(currentSocket);
-                    }
-                    catch (Exception e)
-                    {
-                        _log?.Invoke(currentSocket, e);
-                    }
+                    if (currentSocket.Connected)
+                        if (!await CheckDeadSocketAsync(currentSocket))
+                            return;
+                }
+                catch (Exception e)
+                {
+                    _log?.Invoke(currentSocket, e);
                 }
 
                 await Task.Delay(1000);
             }
         }
 
-        private async Task CheckDeadSocketAsync(ClientTcpContext<TSocketData> connection)
+        private async Task<bool> CheckDeadSocketAsync(ClientTcpContext<TSocketData> connection)
         {
-
+            
             var lastSendPingTime = DateTime.UtcNow;
 
             connection.SocketStatistic.EachSecondTimer();
@@ -124,21 +121,27 @@ namespace MyTcpSockets
                 _log?.Invoke(connection, message);
 
                 await connection.DisconnectAsync();
-                return;
+                return false;
             }
 
             if (DateTime.UtcNow - lastSendPingTime > PingInterval)
-            {
                 await connection.SendPingAsync();
-            }
+
+            return true;
+
         }
 
 
         public ClientTcpContext<TSocketData> CurrentTcpContext { get; private set; }
 
+        
+        private void StartReadThread()
+        {
+          Task.Run(CurrentTcpContext.ReadLoopAsync);
+        }
+
         private async Task SocketThread()
         {
-            var checkConnectionsTask = DeadSocketLoopAsync();
 
             long socketId = 0;
             while (_working)
@@ -152,14 +155,13 @@ namespace MyTcpSockets
                         CurrentTcpContext = await ConnectAsync(ipEndPoint, socketId);
                         socketId++;
 
-                        await CurrentTcpContext.ReadLoopAsync();
+                        StartReadThread();
+                        await RunDeadSocketDetectionAsync(CurrentTcpContext);
                     }
                     catch (Exception ex)
                     {
                         _log?.Invoke(CurrentTcpContext, "Connection support exception:" + ex.Message);
                         _log?.Invoke(CurrentTcpContext, ex);
-
-                    
                     }
                     finally
                     {
@@ -170,8 +172,6 @@ namespace MyTcpSockets
                 _log?.Invoke(null, "Making reconnection timeout: "+_reconnectTimeOut.ToString("g"));
                 await Task.Delay(_reconnectTimeOut);
             }
-
-            await checkConnectionsTask;
             
         }
 
