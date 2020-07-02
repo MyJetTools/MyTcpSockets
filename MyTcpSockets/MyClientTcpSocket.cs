@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -135,10 +134,7 @@ namespace MyTcpSockets
         public ClientTcpContext<TSocketData> CurrentTcpContext { get; private set; }
 
         
-        private void StartReadThread()
-        {
-          Task.Run(CurrentTcpContext.ReadLoopAsync);
-        }
+
 
         private async Task SocketThread()
         {
@@ -155,7 +151,7 @@ namespace MyTcpSockets
                         CurrentTcpContext = await ConnectAsync(ipEndPoint, socketId);
                         socketId++;
 
-                        StartReadThread();
+                        CurrentTcpContext.StartReadThread();
                         await RunDeadSocketDetectionAsync(CurrentTcpContext);
                     }
                     catch (Exception ex)

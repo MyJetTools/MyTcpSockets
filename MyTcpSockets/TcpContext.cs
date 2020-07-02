@@ -165,13 +165,20 @@ namespace MyTcpSockets
                 }
                 
                 await trafficWriterTask;
-                
             }
             finally
             {
                 WriteLog("Disconnected from ReadLoopAsync");
                 await DisconnectAsync();
             }
+        }
+
+
+
+        internal Task ReadLoopTask;
+        internal void StartReadThread()
+        {
+            ReadLoopTask = ReadLoopAsync();
         }
         
         public void SendPacket(TSocketData data)

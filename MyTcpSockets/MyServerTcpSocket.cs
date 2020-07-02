@@ -86,27 +86,15 @@ namespace MyTcpSockets
 
         private async Task KickOffNewSocketAsync(TcpContext<TSocketData> tcpContext, TcpClient acceptedSocket)
         {
-      
-            try
-            {
-                await tcpContext.StartAsync(acceptedSocket, _getSerializer(), _outDataSender, _lockObject, _log,
-                    socket =>
-                    {
-                        _connections.RemoveSocket(socket.Id);
-                    });
-                
-                _log?.Invoke(tcpContext, $"Socket Accepted; Ip:{acceptedSocket.Client.RemoteEndPoint}. Id=" + tcpContext.Id);
 
-                await tcpContext.ReadLoopAsync();
-            }
-            finally
-            {
-                await tcpContext.DisconnectAsync();
-            }
+            await tcpContext.StartAsync(acceptedSocket, _getSerializer(), _outDataSender, _lockObject, _log,
+                socket => { _connections.RemoveSocket(socket.Id); });
 
+            _log?.Invoke(tcpContext,
+                $"Socket Accepted; Ip:{acceptedSocket.Client.RemoteEndPoint}. Id=" + tcpContext.Id);
+
+            tcpContext.StartReadThread();
         }
-
-
 
         private async Task AcceptSocketLoopAsync()
         {
@@ -136,9 +124,7 @@ namespace MyTcpSockets
                     }
 
                     _connections.AddSocket(connection);
-                    var readSocketTask = KickOffNewSocketAsync(connection, acceptedSocket);
-                    PlugDisconnectToReadTask(readSocketTask, connection.Id);
-
+                    await KickOffNewSocketAsync(connection, acceptedSocket);
                 }
                 catch (Exception ex)
                 {
@@ -148,14 +134,6 @@ namespace MyTcpSockets
 
         }
 
-
-        private void PlugDisconnectToReadTask(Task readSocketTask, long socketId)
-        {
-            readSocketTask.ContinueWith(itm =>
-            {
-                _connections.RemoveSocket(socketId);
-            });
-        }
         public IReadOnlyList<TcpContext<TSocketData>> GetConnections(
             Func<TcpContext<TSocketData>, bool> filterCondition = null)
         {
