@@ -21,13 +21,16 @@ namespace MyTcpSockets
 
         private Action<ITcpContext, object> _log;
 
-        public TimeSpan PingInterval { get; private set; } = TimeSpan.FromSeconds(5);
+        public TimeSpan PingInterval { get; private set; }
+
+        private TimeSpan _disconnectInterval; 
 
         public MyClientTcpSocket(Func<string> getHostPort, TimeSpan reconnectTimeOut, int sendBufferSize = 1024 * 1024)
         {
             _outDataSender = new OutDataSender(_lockObject, sendBufferSize);
             _getHostPort = getHostPort;
             _reconnectTimeOut = reconnectTimeOut;
+            SetPingInterval(TimeSpan.FromSeconds(3));
         }
 
         public MyClientTcpSocket<TSocketData> AddLog(Action<ITcpContext, object> log)
@@ -48,6 +51,7 @@ namespace MyTcpSockets
         public MyClientTcpSocket<TSocketData> SetPingInterval(TimeSpan pingInterval)
         {
             PingInterval = pingInterval;
+            _disconnectInterval = pingInterval + pingInterval + pingInterval;
             return this;
         }
 
@@ -113,7 +117,7 @@ namespace MyTcpSockets
 
             var receiveInterval = DateTime.UtcNow - connection.SocketStatistic.LastReceiveTime;
 
-            if (receiveInterval > PingInterval * 3)
+            if (receiveInterval > _disconnectInterval)
             {
                 var message = "Long time [" + receiveInterval +
                               "] no received activity. Disconnecting socket " + connection.ContextName;

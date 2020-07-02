@@ -8,12 +8,44 @@
         <Company>MyJetTools</Company>
         <Authors>MyJetTools</Authors>
         <Copyright>MyJetTools</Copyright>
+        <LangVersion>8</LangVersion>
     </PropertyGroup>
 
 
     <ItemGroup>
         <PackageReference Include="System.Memory" Version="4.5.4" />
         <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
+    </ItemGroup>
+
+
+    <ItemGroup>
+      <Compile Include="..\MyTcpSockets\Connections.cs">
+        <Link>Connections.cs</Link>
+      </Compile>
+      <Compile Include="..\MyTcpSockets\HostPortUtils.cs">
+        <Link>HostPortUtils.cs</Link>
+      </Compile>
+      <Compile Include="..\MyTcpSockets\ITcpSerializer.cs">
+        <Link>ITcpSerializer.cs</Link>
+      </Compile>
+      <Compile Include="..\MyTcpSockets\MyClientTcpSocket.cs">
+        <Link>MyClientTcpSocket.cs</Link>
+      </Compile>
+      <Compile Include="..\MyTcpSockets\MyServerTcpSocket.cs">
+        <Link>MyServerTcpSocket.cs</Link>
+      </Compile>
+      <Compile Include="..\MyTcpSockets\OutDataSender.cs">
+        <Link>OutDataSender.cs</Link>
+      </Compile>
+      <Compile Include="..\MyTcpSockets\OutPackageCompiler.cs">
+        <Link>OutPackageCompiler.cs</Link>
+      </Compile>
+      <Compile Include="..\MyTcpSockets\SocketStatistic.cs">
+        <Link>SocketStatistic.cs</Link>
+      </Compile>
+      <Compile Include="..\MyTcpSockets\TcpContext.cs">
+        <Link>TcpContext.cs</Link>
+      </Compile>
     </ItemGroup>
 
 </Project>

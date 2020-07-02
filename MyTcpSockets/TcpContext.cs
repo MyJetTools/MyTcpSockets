@@ -158,10 +158,16 @@ namespace MyTcpSockets
                 
                 while (TcpClient.Connected)
                 {
+#if NETSTANDARD2_1
                     await foreach (var incomingDataPacket in TcpSerializer.DeserializeAsync(trafficReader, _cancellationToken.Token))
                     {
                         await HandleIncomingDataAsync(incomingDataPacket);
                     }
+#else
+                    var incomingDataPacket = await TcpSerializer.DeserializeAsync(trafficReader, _cancellationToken.Token);
+                    await HandleIncomingDataAsync(incomingDataPacket);
+#endif
+      
                 }
                 
                 await trafficWriterTask;

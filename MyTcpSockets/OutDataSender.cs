@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace MyTcpSockets
 {
-    
+
     public class OutDataSender
     {
         private readonly object _lockObject;
@@ -28,7 +28,7 @@ namespace MyTcpSockets
         {
             _log = log;
         }
-        
+
         private bool Working { get; set; }
 
 
@@ -40,7 +40,7 @@ namespace MyTcpSockets
             try
             {
                 var task = _notifyMePlease;
-                _notifyMePlease = null; 
+                _notifyMePlease = null;
                 task.SetResult(0);
             }
             catch (Exception e)
@@ -57,7 +57,7 @@ namespace MyTcpSockets
                 tcpContext.DataToSend.Enqueue(dataToSend);
                 if (!_socketsWithData.ContainsKey(tcpContext.Id))
                     _socketsWithData.Add(tcpContext.Id, tcpContext);
-                
+
                 PushTask();
             }
         }
@@ -76,8 +76,6 @@ namespace MyTcpSockets
             }
         }
 
-
-
         private void CleanDisconnectedSocket(ITcpContext ctx)
         {
             ctx.DataToSend.Clear();
@@ -88,25 +86,32 @@ namespace MyTcpSockets
         {
             lock (_lockObject)
             {
-                while (_socketsWithData.Count>0)
+                while (_socketsWithData.Count > 0)
                 {
                     try
                     {
+
+                      #if NETSTANDARD2_1
                         var (socketId, tcpContext) = _socketsWithData.First();
+                      #else
+                        var itm = _socketsWithData.First();
+                        var socketId = itm.Key;
+                        var tcpContext = itm.Value;
+                      #endif
 
                         if (!tcpContext.Connected)
                         {
-                            Console.WriteLine("Skipping sending to Disconnected socket: "+socketId);
+                            Console.WriteLine("Skipping sending to Disconnected socket: " + socketId);
                             CleanDisconnectedSocket(tcpContext);
                             continue;
                         }
-                
+
                         var dataToSend = tcpContext.CompileDataToSend(_bufferToSend);
 
                         if (tcpContext.DataToSend.Count == 0)
                             _socketsWithData.Remove(socketId);
-                
-                        return (tcpContext, dataToSend); 
+
+                        return (tcpContext, dataToSend);
                     }
                     catch (Exception e)
                     {
@@ -116,7 +121,7 @@ namespace MyTcpSockets
 
 
             }
-            
+
             return (null, null);
         }
 
@@ -136,17 +141,17 @@ namespace MyTcpSockets
                     catch (Exception e)
                     {
                         _log?.Invoke(tcpContext, e);
-                        
+
                         await tcpContext.DisconnectAsync();
                         lock (_lockObject)
                             CleanDisconnectedSocket(tcpContext);
                     }
 
-                    (tcpContext, dataToSend) = GetNextSocketToSendData();    
+                    (tcpContext, dataToSend) = GetNextSocketToSendData();
                 }
 
             }
-            
+
         }
 
         private Task _task;
@@ -168,6 +173,6 @@ namespace MyTcpSockets
 
             _task.Wait();
         }
-        
+
     }
 }
