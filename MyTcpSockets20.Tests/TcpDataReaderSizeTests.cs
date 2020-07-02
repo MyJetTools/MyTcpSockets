@@ -1,7 +1,10 @@
 using System;
+using System.Threading;
+using MyTcpSockets.Extensions;
+using MyTcpSockets.Extensions.Tests;
 using NUnit.Framework;
 
-namespace MyTcpSockets.Extensions.Tests
+namespace MyTcpSockets.Tests
 {
     public class TcpDataReaderSizeTests
     {
@@ -14,13 +17,13 @@ namespace MyTcpSockets.Extensions.Tests
 
             trafficReader.NewPackage(incomingArray, incomingArray.Length);
 
+            var tc = new CancellationTokenSource();
+            var data = trafficReader.ReadAsyncAsync(3, tc.Token).Result;
 
-            var data = trafficReader.ReadAsyncAsync(3).Result;
-
-            incomingArray.AsReadOnlyMemory(0, 3).ArraysAreEqual(data);
+            TestExtensions.ArraysAreEqual(TestExtensions.AsReadOnlyMemory(incomingArray, 0, 3), data);
    
-            data = trafficReader.ReadAsyncAsync(2).Result;
-            incomingArray.AsReadOnlyMemory(3, 2).ArraysAreEqual(data);
+            data = trafficReader.ReadAsyncAsync(2, tc.Token).Result;
+            TestExtensions.ArraysAreEqual(TestExtensions.AsReadOnlyMemory(incomingArray, 3, 2), data);
             
         }
 
@@ -35,13 +38,13 @@ namespace MyTcpSockets.Extensions.Tests
             trafficReader.NewPackage(incomingArray1, incomingArray1.Length);
             trafficReader.NewPackage(incomingArray2, incomingArray2.Length);
 
+            var tc = new CancellationTokenSource();
+            var data = trafficReader.ReadAsyncAsync(3, tc.Token).Result;
 
-            var data = trafficReader.ReadAsyncAsync(3).Result;
+            TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}), data);
 
-            new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}).ArraysAreEqual(data);
-
-            data = trafficReader.ReadAsyncAsync(4).Result;
-            new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11}).ArraysAreEqual(data);
+            data = trafficReader.ReadAsyncAsync(4, tc.Token).Result;
+            TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11}), data);
 
         }
 
@@ -58,13 +61,13 @@ namespace MyTcpSockets.Extensions.Tests
             trafficReader.NewPackage(incomingArray2);
             trafficReader.NewPackage(incomingArray3);
 
+            var tc = new CancellationTokenSource();
+            var data = trafficReader.ReadAsyncAsync(3, tc.Token).Result;
 
-            var data = trafficReader.ReadAsyncAsync(3).Result;
+            TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}), data);
 
-            new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}).ArraysAreEqual(data);
-
-            data = trafficReader.ReadAsyncAsync(6).Result;
-            new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11, 22, 111}).ArraysAreEqual(data);
+            data = trafficReader.ReadAsyncAsync(6, tc.Token).Result;
+            TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11, 22, 111}), data);
 
         }
 
@@ -80,14 +83,15 @@ namespace MyTcpSockets.Extensions.Tests
             trafficReader.NewPackage(incomingArray1);
             trafficReader.NewPackage(incomingArray2);
             trafficReader.NewPackage(incomingArray3);
+            
+            
+            var tc = new CancellationTokenSource();
+            var data = trafficReader.ReadAsyncAsync(3, tc.Token).Result;
 
+            TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}), data);
 
-            var data = trafficReader.ReadAsyncAsync(3).Result;
-
-            new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}).ArraysAreEqual(data);
-
-            data = trafficReader.ReadAsyncAsync(10).Result;
-            new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11, 22, 33, 44, 55, 66, 111}).ArraysAreEqual(data);
+            data = trafficReader.ReadAsyncAsync(10, tc.Token).Result;
+            TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11, 22, 33, 44, 55, 66, 111}), data);
 
         }
     }

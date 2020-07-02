@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MyTcpSockets.Extensions
@@ -58,7 +59,7 @@ namespace MyTcpSockets.Extensions
         private int _awaitingSize;
         private TaskCompletionSource<ReadOnlyMemory<byte>> _activeTask;
 
-        public ValueTask<ReadOnlyMemory<byte>> ReadAsyncAsync(int size)
+        public ValueTask<ReadOnlyMemory<byte>> ReadAsyncAsync(int size, CancellationToken ct)
         {
             if (_readMode == ReadMode.Sequence)
                 throw new Exception("Reader is already is Sequence Mode. Can not switch to Sizes Mode");
@@ -72,7 +73,7 @@ namespace MyTcpSockets.Extensions
                 return new ValueTask<ReadOnlyMemory<byte>>(result);
             }
 
-            _activeTask = new TaskCompletionSource<ReadOnlyMemory<byte>>();
+            _activeTask = new TaskCompletionSource<ReadOnlyMemory<byte>>(ct);
             _awaitingSize = size;
             return new ValueTask<ReadOnlyMemory<byte>>(_activeTask.Task);
         }
@@ -129,7 +130,7 @@ namespace MyTcpSockets.Extensions
             return false;
         }
 
-        public ValueTask<ReadOnlyMemory<byte>> ReadWhileWeGetSequenceAsync(byte[] sequence)
+        public ValueTask<ReadOnlyMemory<byte>> ReadWhileWeGetSequenceAsync(byte[] sequence, CancellationToken ct)
         {
 
             if (_readMode == ReadMode.Sizes)
@@ -146,7 +147,7 @@ namespace MyTcpSockets.Extensions
                 return new ValueTask<ReadOnlyMemory<byte>>(result);
             }
 
-            _sequenceTask = new TaskCompletionSource<ReadOnlyMemory<byte>>();
+            _sequenceTask = new TaskCompletionSource<ReadOnlyMemory<byte>>(ct);
             _sequence = sequence;
             return new ValueTask<ReadOnlyMemory<byte>>(_sequenceTask.Task);
         }
