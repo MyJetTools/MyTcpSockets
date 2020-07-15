@@ -110,8 +110,6 @@ namespace MyTcpSockets
 
         private async Task<bool> CheckDeadSocketAsync(ClientTcpContext<TSocketData> connection)
         {
-            
-            var lastSendPingTime = DateTime.UtcNow;
 
             connection.SocketStatistic.EachSecondTimer();
 
@@ -127,7 +125,7 @@ namespace MyTcpSockets
                 return false;
             }
 
-            if (DateTime.UtcNow - lastSendPingTime > PingInterval)
+            if (receiveInterval > PingInterval)
                 await connection.SendPingAsync();
 
             return true;
