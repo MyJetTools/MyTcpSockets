@@ -1,9 +1,11 @@
 using System;
 using System.IO;
 using System.Threading;
+using MyTcpSockets.Extensions;
+using MyTcpSockets.Extensions.Tests;
 using NUnit.Framework;
 
-namespace MyTcpSockets.Extensions.Tests
+namespace MyTcpSockets.Tests
 {
     public class TcpDataPipeExtensionsTests
     {
@@ -170,7 +172,7 @@ namespace MyTcpSockets.Extensions.Tests
             var token = new CancellationTokenSource();
             var result = tcpDataReader.ReadByteArrayAsync(token.Token).Result;
 
-            testValue.AsReadOnlyMemory().ArraysAreEqual(result);
+            TestExtensions.ArraysAreEqual(TestExtensions.AsReadOnlyMemory(testValue), result);
         } 
         
     }

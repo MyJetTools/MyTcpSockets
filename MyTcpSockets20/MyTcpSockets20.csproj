@@ -22,6 +22,24 @@
       <Compile Include="..\MyTcpSockets\Connections.cs">
         <Link>Connections.cs</Link>
       </Compile>
+      <Compile Include="..\MyTcpSockets\Extensions\ITcpDataPipe.cs">
+        <Link>Extensions\ITcpDataPipe.cs</Link>
+      </Compile>
+      <Compile Include="..\MyTcpSockets\Extensions\TcpDataPiece.cs">
+        <Link>Extensions\TcpDataPiece.cs</Link>
+      </Compile>
+      <Compile Include="..\MyTcpSockets\Extensions\TcpDataPieceUtils.cs">
+        <Link>Extensions\TcpDataPieceUtils.cs</Link>
+      </Compile>
+      <Compile Include="..\MyTcpSockets\Extensions\TcpDataPipeBySize.cs">
+        <Link>Extensions\TcpDataPipeBySize.cs</Link>
+      </Compile>
+      <Compile Include="..\MyTcpSockets\Extensions\TcpDataPipeReader.cs">
+        <Link>Extensions\TcpDataPipeReader.cs</Link>
+      </Compile>
+      <Compile Include="..\MyTcpSockets\Extensions\TcpDataPipeSequence.cs">
+        <Link>Extensions\TcpDataPipeSequence.cs</Link>
+      </Compile>
       <Compile Include="..\MyTcpSockets\HostPortUtils.cs">
         <Link>HostPortUtils.cs</Link>
       </Compile>
