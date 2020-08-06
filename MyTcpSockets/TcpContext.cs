@@ -35,7 +35,7 @@ namespace MyTcpSockets
         
         public long Id { get; internal set; }
 
-        public SendDataQueue DataToSend { get; } = new SendDataQueue();
+        public SendDataQueue DataToSend { get; private set; }
 
         public ValueTask DisconnectAsync()
         {
@@ -251,6 +251,7 @@ namespace MyTcpSockets
             _log = log;
             Connected = true;
             SocketStatistic = new SocketStatistic();
+            DataToSend = new SendDataQueue(lockObject);
             return OnConnectAsync();
         }
     }

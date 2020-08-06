@@ -11,7 +11,7 @@ namespace MyTcpSockets.Tests
         [Test]
         public void TestOnePacketOneData()
         {
-            var sendDataQueue = new SendDataQueue();
+            var sendDataQueue = new SendDataQueue(new object());
 
             var sourceData = new byte[] {1, 2, 3, 4};
             
@@ -27,7 +27,7 @@ namespace MyTcpSockets.Tests
         [Test]
         public void TestTwoInOneOut()
         {
-            var sendDataQueue = new SendDataQueue();
+            var sendDataQueue = new SendDataQueue(new object());
 
             var sourceData = new byte[] {1, 2, 3, 4};
             var sourceData2 = new byte[] {5, 6, 7, 8};
@@ -45,7 +45,7 @@ namespace MyTcpSockets.Tests
         [Test]
         public void TestOnePacketLessThenTheBuffer()
         {
-            var sendDataQueue = new SendDataQueue();
+            var sendDataQueue = new SendDataQueue(new object());
 
             var sourceData = new ReadOnlyMemory<byte>(new byte[] {1, 2, 3, 4});
             
@@ -66,7 +66,7 @@ namespace MyTcpSockets.Tests
         [Test]
         public void TestComplexMix()
         {
-            var sendDataQueue = new SendDataQueue();
+            var sendDataQueue = new SendDataQueue(new object());
 
             
             sendDataQueue.Enqueue(new byte[] {1, 2, 3, 4});
@@ -87,7 +87,7 @@ namespace MyTcpSockets.Tests
         [Test]
         public void TestComplexMix2()
         {
-            var sendDataQueue = new SendDataQueue();
+            var sendDataQueue = new SendDataQueue(new object());
 
             
             sendDataQueue.Enqueue(new byte[] {1, 2, 3, 4});

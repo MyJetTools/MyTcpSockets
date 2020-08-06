@@ -5,8 +5,14 @@ namespace MyTcpSockets.DataSender
 {
     public class SendDataQueue
     {
-        private readonly object _lockObject = new object();
+        private readonly object _lockObject;
         private readonly List<ReadOnlyMemory<byte>> _queue = new List<ReadOnlyMemory<byte>>();
+
+
+        public SendDataQueue(object lockObject)
+        {
+            _lockObject = lockObject;
+        }
         
         public int Length { get; private set; }
         public void Enqueue(ReadOnlyMemory<byte> data)
@@ -61,7 +67,7 @@ namespace MyTcpSockets.DataSender
                         continue;
                     }
 
-                    var chunk = _queue[0];;
+                    var chunk = _queue[0];
                 
                     chunk.Slice(0, remainsLength).CopyTo(sharedBuffer.AsMemory(index, remainsLength));
                     _queue[0] = chunk.Slice(remainsLength, chunk.Length - remainsLength);

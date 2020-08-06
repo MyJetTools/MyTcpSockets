@@ -74,8 +74,16 @@ namespace MyTcpSockets.DataSender
             while (Working)
             {
 
-                await _asyncMutex.AwaitDataAsync();
+           //     await _asyncMutex.AwaitDataAsync();
 
+
+                var socketsToSend = GetSocketsToSend();
+                if (socketsToSend.Count == 0)
+                {
+                    await Task.Delay(100);
+                    continue;
+                }
+                
                 foreach (var tcpContext in GetSocketsToSend())
                 {
 
@@ -84,14 +92,13 @@ namespace MyTcpSockets.DataSender
                         CleanDisconnectedSocket(tcpContext);
                         continue;
                     }
-                    
+
                     try
                     {
                         var dataToSend = tcpContext.DataToSend.Dequeue(_bufferToSend);
                         if (dataToSend.Length > 0)
                             await tcpContext.SocketStream.WriteAsync(dataToSend);
-                        
-                        if (tcpContext.DataToSend.Length == 0)
+                        else
                             lock (_socketsWithData)
                             {
                                 if (tcpContext.DataToSend.Length == 0)
@@ -105,11 +112,11 @@ namespace MyTcpSockets.DataSender
                         _log?.Invoke(tcpContext, e);
 
                         await tcpContext.DisconnectAsync();
-                   
+
                         CleanDisconnectedSocket(tcpContext);
                     }
 
-                    
+
                 }
 
             }
