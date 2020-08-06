@@ -36,6 +36,8 @@ namespace MyTcpSockets
         public long Id { get; internal set; }
 
         public SendDataQueue DataToSend { get; private set; }
+        
+        private ProducerConsumer<ITcpContext> _producerConsumer = new ProducerConsumer<ITcpContext>();
 
         public ValueTask DisconnectAsync()
         {
@@ -53,16 +55,21 @@ namespace MyTcpSockets
             
             lock (_lockObject)
             {
+  
+                
                 if (!Connected)
                     return new ValueTask();
 
                 Connected = false;
+                
+
             }
             WriteLog($"Socket {ContextName} is Disconnected with Ip:{TcpClient.Client.RemoteEndPoint}. Id=" + Id);
 
             try
             {
                 _cancellationToken.Cancel(true);
+                _producerConsumer.Stop();
             }
             catch (Exception e)
             {
@@ -186,15 +193,46 @@ namespace MyTcpSockets
         {
             ReadLoopTask = ReadLoopAsync();
         }
-        
+
+
+
+        private Task _writeTask;
+        private byte[] _bufferToSend = new byte[1024 * 10];
+        private async Task ConsumerAsync()
+        {
+            while (Connected)
+            {
+                try
+                {
+                    await _producerConsumer.ConsumeAsync();
+                    var sendData = DataToSend.Dequeue(_bufferToSend);
+                    await SocketStream.WriteAsync(sendData);
+
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
+                
+            }
+            
+        }
+
         public void SendPacket(TSocketData data)
         {
             if (!Connected)
                 return;
-            
+
             var dataToSend = TcpSerializer.Serialize(data);
             DataToSend.Enqueue(dataToSend);
-            _outDataSender.PushData(this);
+            _producerConsumer.Produce(this);
+
+            if (_writeTask != null) return;
+            
+            lock (_lockObject)
+                _writeTask ??= ConsumerAsync();
+
         }
 
         private async ValueTask ProcessOnDisconnectAsync()
