@@ -64,9 +64,6 @@
       <Compile Include="..\MyTcpSockets\MyServerTcpSocket.cs">
         <Link>MyServerTcpSocket.cs</Link>
       </Compile>
-      <Compile Include="..\MyTcpSockets\ProducerConsumer.cs">
-        <Link>ProducerConsumer.cs</Link>
-      </Compile>
       <Compile Include="..\MyTcpSockets\SocketStatistic.cs">
         <Link>SocketStatistic.cs</Link>
       </Compile>
