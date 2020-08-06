@@ -31,6 +31,8 @@ namespace MyTcpSockets.DataSender
         }
 
         private bool Working { get; set; }
+        
+        public int Count { get; private set; }
 
 
         public void EnqueueSendData(ITcpContext tcpContext, ReadOnlyMemory<byte> dataToSend)
@@ -41,6 +43,8 @@ namespace MyTcpSockets.DataSender
                 tcpContext.DataToSend.Enqueue(dataToSend);
                 if (!_socketsWithData.ContainsKey(tcpContext.Id))
                     _socketsWithData.Add(tcpContext.Id, tcpContext);
+
+                Count = _socketsWithData.Count;
             }
             
             _asyncMutex.Update(true);
@@ -51,6 +55,7 @@ namespace MyTcpSockets.DataSender
         {
             ctx.DataToSend.Clear();
             _socketsWithData.Remove(ctx.Id);
+            Count = _socketsWithData.Count;
             _asyncMutex.Update(_socketsWithData.Count>0);
         }
 
@@ -88,9 +93,9 @@ namespace MyTcpSockets.DataSender
         {
             while (Working)
             {
-                Console.WriteLine("BeforeMutex");
+                Console.WriteLine("BeforeMutex. Count: "+Count);
                 await _asyncMutex.AwaitDataAsync();
-                Console.WriteLine("AfterMutex");
+                Console.WriteLine("AfterMutex. Count: "+Count);
                 var (tcpContext, dataToSend) = GetNextSocketToSendData();
                 while (tcpContext != null)
                 {
