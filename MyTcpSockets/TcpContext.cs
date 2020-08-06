@@ -35,7 +35,7 @@ namespace MyTcpSockets
         
         public long Id { get; internal set; }
 
-        SendDataQueue ITcpContext.DataToSend { get; } = new SendDataQueue();
+        public SendDataQueue DataToSend { get; } = new SendDataQueue();
 
         public ValueTask DisconnectAsync()
         {
@@ -71,7 +71,7 @@ namespace MyTcpSockets
             
             try
             {
-          
+                DataToSend.Clear();
                 SocketStatistic.WeHaveDisconnect();
             }
             catch (Exception e)
@@ -193,8 +193,8 @@ namespace MyTcpSockets
                 return;
             
             var dataToSend = TcpSerializer.Serialize(data);
-
-            _outDataSender.EnqueueSendData(this, dataToSend);
+            DataToSend.Enqueue(dataToSend);
+            _outDataSender.PushData(this);
         }
 
         private async ValueTask ProcessOnDisconnectAsync()

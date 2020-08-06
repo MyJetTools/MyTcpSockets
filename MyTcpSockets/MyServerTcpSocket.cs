@@ -22,7 +22,7 @@ namespace MyTcpSockets
         public MyServerTcpSocket(IPEndPoint ipEndPoint, int sendBufferSize = 1024 * 1024)
         {
             _ipEndPoint = ipEndPoint;
-            _outDataSender = new OutDataSender(_lockObject, sendBufferSize);
+            _outDataSender = new OutDataSender(sendBufferSize);
             _connections = new Connections<TSocketData>();
         }
 

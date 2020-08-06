@@ -28,7 +28,7 @@ namespace MyTcpSockets
 
         public MyClientTcpSocket(Func<string> getHostPort, TimeSpan reconnectTimeOut, int sendBufferSize = 1024 * 1024)
         {
-            _outDataSender = new OutDataSender(_lockObject, sendBufferSize);
+            _outDataSender = new OutDataSender(sendBufferSize);
             _getHostPort = getHostPort;
             _reconnectTimeOut = reconnectTimeOut;
             SetPingInterval(TimeSpan.FromSeconds(3));
