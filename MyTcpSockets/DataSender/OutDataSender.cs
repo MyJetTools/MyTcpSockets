@@ -45,14 +45,11 @@ namespace MyTcpSockets.DataSender
 
         private void CleanDisconnectedSocket(ITcpContext ctx)
         {
-
             lock (_socketsWithData)
             {
                 _socketsWithData.Remove(ctx.Id);
                 _asyncMutex.Update(_socketsWithData.Count>0);
             }
-                
-            
         }
 
         
@@ -91,8 +88,16 @@ namespace MyTcpSockets.DataSender
                     try
                     {
                         var dataToSend = tcpContext.DataToSend.Dequeue(_bufferToSend);
-                        if (dataToSend.Length >0)
+                        if (dataToSend.Length > 0)
                             await tcpContext.SocketStream.WriteAsync(dataToSend);
+                        
+                        if (tcpContext.DataToSend.Length == 0)
+                            lock (_socketsWithData)
+                            {
+                                if (tcpContext.DataToSend.Length == 0)
+                                    _socketsWithData.Remove(tcpContext.Id);
+                                _asyncMutex.Update(_socketsWithData.Count > 0);
+                            }
                     }
                     catch (Exception e)
                     {
@@ -103,6 +108,8 @@ namespace MyTcpSockets.DataSender
                    
                         CleanDisconnectedSocket(tcpContext);
                     }
+
+                    
                 }
 
             }
