@@ -35,6 +35,9 @@ namespace MyTcpSockets.DataSender
 
         public void EnqueueSendData(ITcpContext tcpContext, ReadOnlyMemory<byte> dataToSend)
         {
+            tcpContext.SocketStream.WriteAsync(dataToSend);
+            return;
+            
             lock (_lockObject)
             {
                 tcpContext.DataToSend.Enqueue(dataToSend);
