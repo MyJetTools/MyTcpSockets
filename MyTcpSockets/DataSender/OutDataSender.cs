@@ -12,7 +12,7 @@ namespace MyTcpSockets.DataSender
 
         private readonly byte[] _bufferToSend;
         
-        private readonly AsyncMutex _asyncMutex = new AsyncMutex();
+        private readonly ProducerConsumer<ITcpContext> _producerConsumer = new ProducerConsumer<ITcpContext>();
 
         public OutDataSender(int maxPacketSize)
         {
@@ -31,40 +31,7 @@ namespace MyTcpSockets.DataSender
 
         public void PushData(ITcpContext tcpContext)
         {
-            lock (_socketsWithData)
-            {
-                if (!_socketsWithData.ContainsKey(tcpContext.Id))
-                    _socketsWithData.Add(tcpContext.Id, tcpContext);
-                
-                _asyncMutex.Update(true);
-            }
-            
-            
-        }
-
-
-        private void CleanDisconnectedSocket(ITcpContext ctx)
-        {
-            lock (_socketsWithData)
-            {
-                _socketsWithData.Remove(ctx.Id);
-                _asyncMutex.Update(_socketsWithData.Count>0);
-            }
-        }
-
-        
-        
-        private readonly List<ITcpContext> _socketsReusableObject = new List<ITcpContext>();
-
-        private IReadOnlyList<ITcpContext> GetSocketsToSend()
-        {
-            _socketsReusableObject.Clear();
-            lock (_socketsWithData)
-            {
-                _socketsReusableObject.AddRange(_socketsWithData.Values);
-                return _socketsReusableObject;
-            }
-                
+            _producerConsumer.Produce(tcpContext);
         }
 
 
@@ -74,37 +41,14 @@ namespace MyTcpSockets.DataSender
             while (Working)
             {
 
-           //     await _asyncMutex.AwaitDataAsync();
+                var tcpContext = await _producerConsumer.ConsumeAsync();
 
-
-                var socketsToSend = GetSocketsToSend();
-                if (socketsToSend.Count == 0)
-                {
-                    await Task.Delay(100);
-                    continue;
-                }
-                
-                foreach (var tcpContext in GetSocketsToSend())
-                {
-
-                    if (!tcpContext.Connected)
-                    {
-                        CleanDisconnectedSocket(tcpContext);
-                        continue;
-                    }
-
+                var sendData = tcpContext.DataToSend.Dequeue(_bufferToSend);
+                if (sendData.Length > 0)
                     try
                     {
-                        var dataToSend = tcpContext.DataToSend.Dequeue(_bufferToSend);
-                        if (dataToSend.Length > 0)
-                            await tcpContext.SocketStream.WriteAsync(dataToSend);
-                        else
-                            lock (_socketsWithData)
-                            {
-                                if (tcpContext.DataToSend.Length == 0)
-                                    _socketsWithData.Remove(tcpContext.Id);
-                                _asyncMutex.Update(_socketsWithData.Count > 0);
-                            }
+                        await tcpContext.SocketStream.WriteAsync(sendData);
+
                     }
                     catch (Exception e)
                     {
@@ -113,11 +57,7 @@ namespace MyTcpSockets.DataSender
 
                         await tcpContext.DisconnectAsync();
 
-                        CleanDisconnectedSocket(tcpContext);
                     }
-
-
-                }
 
             }
 
@@ -134,10 +74,8 @@ namespace MyTcpSockets.DataSender
 
         public void Stop()
         {
-
             Working = false;
-            _asyncMutex.Stop();
-
+            _producerConsumer.Stop();
             _task.Wait();
         }
 
