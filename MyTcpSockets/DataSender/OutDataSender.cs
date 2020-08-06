@@ -35,9 +35,7 @@ namespace MyTcpSockets.DataSender
 
         public void EnqueueSendData(ITcpContext tcpContext, ReadOnlyMemory<byte> dataToSend)
         {
-            tcpContext.SocketStream.WriteAsync(dataToSend);
-            return;
-            
+
             lock (_lockObject)
             {
                 tcpContext.DataToSend.Enqueue(dataToSend);
@@ -90,7 +88,9 @@ namespace MyTcpSockets.DataSender
         {
             while (Working)
             {
+                Console.WriteLine("BeforeMutex");
                 await _asyncMutex.AwaitDataAsync();
+                Console.WriteLine("AfterMutex");
                 var (tcpContext, dataToSend) = GetNextSocketToSendData();
                 while (tcpContext != null)
                 {
@@ -100,6 +100,7 @@ namespace MyTcpSockets.DataSender
                     }
                     catch (Exception e)
                     {
+                        Console.WriteLine(e);
                         _log?.Invoke(tcpContext, e);
 
                         await tcpContext.DisconnectAsync();
