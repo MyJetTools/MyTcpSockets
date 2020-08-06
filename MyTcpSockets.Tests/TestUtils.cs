@@ -27,5 +27,16 @@ namespace MyTcpSockets.Tests
                 Assert.AreEqual(fromSpan[i], toSpan[i]);
             }
         }
+        
+        public static void ArraysAreEqual(this byte[] from, ReadOnlyMemory<byte> to)
+        {
+            var toSpan = to.Span;
+            Assert.IsTrue(from.Length == to.Length);
+
+            for (var i = 0; i < from.Length; i++)
+            {
+                Assert.AreEqual(from[i], toSpan[i]);
+            }
+        }
     }
 }

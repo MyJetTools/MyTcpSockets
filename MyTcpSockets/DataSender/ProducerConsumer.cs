@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace MyTcpSockets
+namespace MyTcpSockets.DataSender
 {
     public class ProducerConsumer<T>
     {

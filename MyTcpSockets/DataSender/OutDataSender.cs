@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace MyTcpSockets
+namespace MyTcpSockets.DataSender
 {
 
     public class OutDataSender
@@ -12,9 +12,10 @@ namespace MyTcpSockets
 
         private readonly Dictionary<long, ITcpContext> _socketsWithData = new Dictionary<long, ITcpContext>();
 
-        private TaskCompletionSource<int> _notifyMePlease;
-
         private readonly byte[] _bufferToSend;
+        
+        
+        private readonly AsyncMutex _asyncMutex = new AsyncMutex();
 
         public OutDataSender(object lockObject, int maxPacketSize)
         {
@@ -32,24 +33,6 @@ namespace MyTcpSockets
         private bool Working { get; set; }
 
 
-        private void PushTask()
-        {
-            if (_notifyMePlease == null)
-                return;
-
-            try
-            {
-                var task = _notifyMePlease;
-                _notifyMePlease = null;
-                task.SetResult(0);
-            }
-            catch (Exception e)
-            {
-                _log?.Invoke(null, e);
-            }
-
-        }
-
         public void EnqueueSendData(ITcpContext tcpContext, ReadOnlyMemory<byte> dataToSend)
         {
             lock (_lockObject)
@@ -57,72 +40,46 @@ namespace MyTcpSockets
                 tcpContext.DataToSend.Enqueue(dataToSend);
                 if (!_socketsWithData.ContainsKey(tcpContext.Id))
                     _socketsWithData.Add(tcpContext.Id, tcpContext);
-
-                PushTask();
             }
+            
+            _asyncMutex.Update(true);
         }
 
-
-
-        private Task WaitNewDataAsync()
-        {
-            lock (_lockObject)
-            {
-                if (_socketsWithData.Count > 0)
-                    return Task.CompletedTask;
-
-                _notifyMePlease = new TaskCompletionSource<int>();
-                return _notifyMePlease.Task;
-            }
-        }
 
         private void CleanDisconnectedSocket(ITcpContext ctx)
         {
             ctx.DataToSend.Clear();
             _socketsWithData.Remove(ctx.Id);
+            _asyncMutex.Update(_socketsWithData.Count>0);
         }
 
         private (ITcpContext tcpContext, ReadOnlyMemory<byte> dataToSend) GetNextSocketToSendData()
         {
             lock (_lockObject)
             {
-                while (_socketsWithData.Count > 0)
+                if (_socketsWithData.Count == 0)
+                    return (null, Array.Empty<byte>());
+
+                var tcpContext = _socketsWithData.Values.First();
+
+                if (tcpContext.DataToSend.Length == 0)
                 {
-                    try
-                    {
-
-                      #if NETSTANDARD2_1
-                        var (socketId, tcpContext) = _socketsWithData.First();
-                      #else
-                        var itm = _socketsWithData.First();
-                        var socketId = itm.Key;
-                        var tcpContext = itm.Value;
-                      #endif
-
-                        if (!tcpContext.Connected)
-                        {
-                            Console.WriteLine("Skipping sending to Disconnected socket: " + socketId);
-                            CleanDisconnectedSocket(tcpContext);
-                            continue;
-                        }
-
-                        var dataToSend = tcpContext.CompileDataToSend(_bufferToSend);
-
-                        if (tcpContext.DataToSend.Count == 0)
-                            _socketsWithData.Remove(socketId);
-
-                        return (tcpContext, dataToSend);
-                    }
-                    catch (Exception e)
-                    {
-                        _log?.Invoke(null, e);
-                    }
+                    _socketsWithData.Remove(tcpContext.Id);
+                    _asyncMutex.Update(_socketsWithData.Count>0);
+                    return (null, Array.Empty<byte>());
                 }
 
+                if (!tcpContext.Connected)
+                {
+                    Console.WriteLine("Skipping sending to Disconnected socket: " + tcpContext.Id);
+                    CleanDisconnectedSocket(tcpContext);
+                    return (null, Array.Empty<byte>());
+                }
 
+                var dataToSend = tcpContext.DataToSend.Dequeue(_bufferToSend);
+                return (tcpContext, dataToSend);
             }
 
-            return (null, null);
         }
 
 
@@ -130,7 +87,7 @@ namespace MyTcpSockets
         {
             while (Working)
             {
-                await WaitNewDataAsync();
+                await _asyncMutex.AwaitDataAsync();
                 var (tcpContext, dataToSend) = GetNextSocketToSendData();
                 while (tcpContext != null)
                 {
@@ -168,7 +125,7 @@ namespace MyTcpSockets
             lock (_lockObject)
             {
                 Working = false;
-                PushTask();
+                _asyncMutex.Stop();
             }
 
             _task.Wait();

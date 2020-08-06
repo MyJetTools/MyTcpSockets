@@ -1,10 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using MyTcpSockets.Extensions;
+using MyTcpSockets.DataSender;
 
 namespace MyTcpSockets
 {
@@ -13,7 +13,7 @@ namespace MyTcpSockets
     {
         Stream SocketStream { get; }
         
-        Queue<ReadOnlyMemory<byte>> DataToSend { get; }
+        SendDataQueue DataToSend { get; }
 
         ValueTask DisconnectAsync();
         
@@ -35,7 +35,7 @@ namespace MyTcpSockets
         
         public long Id { get; internal set; }
 
-        Queue<ReadOnlyMemory<byte>> ITcpContext.DataToSend { get; } = new Queue<ReadOnlyMemory<byte>>();
+        SendDataQueue ITcpContext.DataToSend { get; } = new SendDataQueue();
 
         public ValueTask DisconnectAsync()
         {
@@ -193,6 +193,7 @@ namespace MyTcpSockets
                 return;
             
             var dataToSend = TcpSerializer.Serialize(data);
+
             _outDataSender.EnqueueSendData(this, dataToSend);
         }
 
