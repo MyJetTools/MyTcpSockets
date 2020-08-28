@@ -46,11 +46,11 @@
       <Compile Include="..\MyTcpSockets\Extensions\TcpDataPipeBySize.cs">
         <Link>Extensions\TcpDataPipeBySize.cs</Link>
       </Compile>
-      <Compile Include="..\MyTcpSockets\Extensions\TcpDataPipeReader.cs">
-        <Link>Extensions\TcpDataPipeReader.cs</Link>
-      </Compile>
       <Compile Include="..\MyTcpSockets\Extensions\TcpDataPipeSequence.cs">
         <Link>Extensions\TcpDataPipeSequence.cs</Link>
+      </Compile>
+      <Compile Include="..\MyTcpSockets\Extensions\TcpDataReader.cs">
+        <Link>TcpDataReader.cs</Link>
       </Compile>
       <Compile Include="..\MyTcpSockets\HostPortUtils.cs">
         <Link>HostPortUtils.cs</Link>

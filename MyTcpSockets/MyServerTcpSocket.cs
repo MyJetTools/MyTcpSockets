@@ -13,16 +13,16 @@ namespace MyTcpSockets
 
         private readonly Connections<TSocketData>_connections;
         private readonly IPEndPoint _ipEndPoint;
+        private readonly int _sendBufferSize;
         private Action<ITcpContext, object> _log;
         
-        private readonly OutDataSender _outDataSender;
         
         private readonly object _lockObject = new object();
 
         public MyServerTcpSocket(IPEndPoint ipEndPoint, int sendBufferSize = 1024 * 1024)
         {
             _ipEndPoint = ipEndPoint;
-            _outDataSender = new OutDataSender(sendBufferSize);
+            _sendBufferSize = sendBufferSize;
             _connections = new Connections<TSocketData>();
         }
 
@@ -30,7 +30,6 @@ namespace MyTcpSockets
         public MyServerTcpSocket<TSocketData> AddLog(Action<ITcpContext, object> log)
         {
             _log = log;
-            _outDataSender.RegisterLog(log);
             return this;
         } 
 
@@ -88,8 +87,8 @@ namespace MyTcpSockets
         private async Task KickOffNewSocketAsync(TcpContext<TSocketData> tcpContext, TcpClient acceptedSocket)
         {
 
-            await tcpContext.StartAsync(acceptedSocket, _getSerializer(), _outDataSender, _lockObject, _log,
-                socket => { _connections.RemoveSocket(socket.Id); });
+            await tcpContext.StartAsync(acceptedSocket, _getSerializer(), _lockObject, _log,
+                socket => { _connections.RemoveSocket(socket.Id); }, new byte[_sendBufferSize]);
 
             _log?.Invoke(tcpContext,
                 $"Socket Accepted; Ip:{acceptedSocket.Client.RemoteEndPoint}. Id=" + tcpContext.Id);
@@ -102,9 +101,7 @@ namespace MyTcpSockets
 
             _serverSocket = new TcpListener(_ipEndPoint);
             _serverSocket.Start();
-
-            _outDataSender.Start();
-
+            
             _log?.Invoke(null, "Started listening tcp socket: " + _ipEndPoint.Port);
             var socketId = 0;
 
@@ -174,8 +171,7 @@ namespace MyTcpSockets
                 return;
 
             _working = false;
-            _outDataSender.Stop();
-            
+
             _serverSocket.Server.Close(1000);
             _serverSocket.Stop();
 
@@ -186,7 +182,6 @@ namespace MyTcpSockets
 
             _theTask.Wait();
             
-            _outDataSender.Stop();
         }
    
 

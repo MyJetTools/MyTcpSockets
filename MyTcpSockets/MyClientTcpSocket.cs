@@ -2,7 +2,6 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using MyTcpSockets.DataSender;
 
 namespace MyTcpSockets
 {
@@ -16,7 +15,6 @@ namespace MyTcpSockets
         private Func<ClientTcpContext<TSocketData>> _socketContextFactory;
 
         private Func<ITcpSerializer<TSocketData>> _socketSerializerFactory;
-        private readonly OutDataSender _outDataSender;
 
         private readonly object _lockObject = new object();
 
@@ -24,20 +22,20 @@ namespace MyTcpSockets
 
         public TimeSpan PingInterval { get; private set; }
 
-        private TimeSpan _disconnectInterval; 
+        private TimeSpan _disconnectInterval;
 
+        private readonly byte[] _outBuffer;
         public MyClientTcpSocket(Func<string> getHostPort, TimeSpan reconnectTimeOut, int sendBufferSize = 1024 * 1024)
         {
-            _outDataSender = new OutDataSender(sendBufferSize);
             _getHostPort = getHostPort;
             _reconnectTimeOut = reconnectTimeOut;
             SetPingInterval(TimeSpan.FromSeconds(3));
+            _outBuffer = new byte[sendBufferSize];
         }
 
         public MyClientTcpSocket<TSocketData> AddLog(Action<ITcpContext, object> log)
         {
             _log = log;
-            _outDataSender.RegisterLog(log);
             return this;
         }
 
@@ -78,10 +76,10 @@ namespace MyTcpSockets
 
             await clientTcpContext.StartAsync(tcpClient,
                 _socketSerializerFactory(),
-                _outDataSender,
                 _lockObject,
                 _log,
-                null);
+                null, 
+                _outBuffer);
 
             _log?.Invoke(clientTcpContext, "Connected. Id=" + clientTcpContext.Id);
 
@@ -113,8 +111,9 @@ namespace MyTcpSockets
         {
 
             connection.SocketStatistic.EachSecondTimer();
+            var now = DateTime.UtcNow;
 
-            var receiveInterval = DateTime.UtcNow - connection.SocketStatistic.LastReceiveTime;
+            var receiveInterval = now - connection.SocketStatistic.LastReceiveTime;
 
             if (receiveInterval > _disconnectInterval)
             {
@@ -126,18 +125,16 @@ namespace MyTcpSockets
                 return false;
             }
 
-            if (receiveInterval > PingInterval)
+            if (DateTime.UtcNow - connection.SocketStatistic.LastPingSentDateTime > PingInterval)
+            {
+                connection.SocketStatistic.LastPingSentDateTime = now;
                 await connection.SendPingAsync();
+            }
 
             return true;
-
         }
 
-
         public ClientTcpContext<TSocketData> CurrentTcpContext { get; private set; }
-
-        
-
 
         private async Task SocketThread()
         {
@@ -188,10 +185,8 @@ namespace MyTcpSockets
 
             if (_working)
                 return;
-            
 
             _working = true;
-            _outDataSender.Start();
             _socketLoop = SocketThread();
         }
 
@@ -202,9 +197,6 @@ namespace MyTcpSockets
             currentTcpContext.DisconnectAsync().AsTask().Wait();
             var socketLoopTask = _socketLoop;
             socketLoopTask?.Wait();
-            
-            _outDataSender.Stop();
-
         }
 
         public bool Connected => CurrentTcpContext != null;

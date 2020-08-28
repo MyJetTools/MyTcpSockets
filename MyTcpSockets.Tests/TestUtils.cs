@@ -38,5 +38,13 @@ namespace MyTcpSockets.Tests
                 Assert.AreEqual(from[i], toSpan[i]);
             }
         }
+        
+        public static void PopulateArray(this Memory<byte>dest,  byte[] src)
+        {
+            for (var i = 0; i < src.Length; i++)
+            {
+                dest.Span[i] = src[i];
+            }
+        }
     }
 }

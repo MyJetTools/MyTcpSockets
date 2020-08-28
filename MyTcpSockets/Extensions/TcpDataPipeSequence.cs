@@ -8,14 +8,14 @@ namespace MyTcpSockets.Extensions
 
     public class TcpDataPipeSequence : ITcpDataPipe
     {
-        public readonly List<TcpDataPiece> IncomingPackages = new List<TcpDataPiece>();
+        private readonly List<TcpDataPiece> _incomingPackages = new List<TcpDataPiece>();
 
         private TaskCompletionSource<ReadOnlyMemory<byte>> _sequenceTask;
         private byte[] _sequence;
         
         public void PushData(TcpDataPiece tcpDataPiece)
         {
-            IncomingPackages.Add(tcpDataPiece);
+            _incomingPackages.Add(tcpDataPiece);
             
             if (_sequenceTask == null)
                 return;
@@ -38,17 +38,17 @@ namespace MyTcpSockets.Extensions
 
         public (bool hasElement, byte el) GetNextElement()
         {
-            if (ListIndex >= IncomingPackages.Count)
+            if (ListIndex >= _incomingPackages.Count)
                 return (false, 0);
 
             try
             {
                 UncommittedSize++;
-                return (true, IncomingPackages[ListIndex].Data[ItemIndex++]);
+                return (true, _incomingPackages[ListIndex].Data[ItemIndex++]);
             }
             finally
             {
-                if (ItemIndex >= IncomingPackages[ListIndex].Data.Length)
+                if (ItemIndex >= _incomingPackages[ListIndex].Data.Length)
                 {
                     ItemIndex = 0;
                     ListIndex++;
@@ -58,9 +58,9 @@ namespace MyTcpSockets.Extensions
 
         public ReadOnlyMemory<byte> GetUncommittedSequence()
         {
-            var result = IncomingPackages.GetAndClean(UncommittedSize);
+            var result = _incomingPackages.GetAndClean(UncommittedSize);
             ListIndex = 0;
-            ItemIndex = IncomingPackages.Count > 0 ? IncomingPackages[0].StartIndex : 0;
+            ItemIndex = _incomingPackages.Count > 0 ? _incomingPackages[0].StartIndex : 0;
             UncommittedSize = 0;
             return result;
         }
@@ -70,7 +70,7 @@ namespace MyTcpSockets.Extensions
         private ReadOnlyMemory<byte> SearchSequence(byte[] sequence)
         {
 
-            if (IncomingPackages.Count == 0)
+            if (_incomingPackages.Count == 0)
                 return Array.Empty<byte>();
 
             var next = GetNextElement();

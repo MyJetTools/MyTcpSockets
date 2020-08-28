@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using MyTcpSockets.DataSender;
 
-namespace MyTcpSockets.DataSender
+namespace MyTcpSockets
 {
 
     public class OutDataSender
@@ -48,7 +49,6 @@ namespace MyTcpSockets.DataSender
                     try
                     {
                         await tcpContext.SocketStream.WriteAsync(sendData);
-
                     }
                     catch (Exception e)
                     {

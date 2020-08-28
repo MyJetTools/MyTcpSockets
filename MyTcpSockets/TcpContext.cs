@@ -9,7 +9,7 @@ using MyTcpSockets.DataSender;
 namespace MyTcpSockets
 {
 
-    public interface ITcpContext
+   public interface ITcpContext
     {
         Stream SocketStream { get; }
         
@@ -26,8 +26,6 @@ namespace MyTcpSockets
     public abstract class TcpContext<TSocketData> : ITcpContext
     {
 
-        private OutDataSender _outDataSender;
-
         private object _lockObject;
         
         public TcpClient TcpClient { get; protected set; }
@@ -37,7 +35,7 @@ namespace MyTcpSockets
 
         public SendDataQueue DataToSend { get; private set; }
         
-        private ProducerConsumer<ITcpContext> _producerConsumer = new ProducerConsumer<ITcpContext>();
+        private readonly ProducerConsumer<ITcpContext> _producerConsumer = new ProducerConsumer<ITcpContext>();
 
         public ValueTask DisconnectAsync()
         {
@@ -197,7 +195,7 @@ namespace MyTcpSockets
 
 
         private Task _writeTask;
-        private byte[] _bufferToSend = new byte[1024 * 10];
+        private byte[] _bufferToSend;
         private async Task ConsumerAsync()
         {
             while (Connected)
@@ -207,7 +205,6 @@ namespace MyTcpSockets
                     await _producerConsumer.ConsumeAsync();
                     var sendData = DataToSend.Dequeue(_bufferToSend);
                     await SocketStream.WriteAsync(sendData);
-
                 }
                 catch (Exception e)
                 {
@@ -277,11 +274,11 @@ namespace MyTcpSockets
 
         private Action<ITcpContext> _disconnectedCallback;
 
-        internal ValueTask StartAsync(TcpClient tcpClient, ITcpSerializer<TSocketData> tcpSerializer, OutDataSender outDataSender, object lockObject, Action<ITcpContext, object> log, Action<ITcpContext> disconnectedCallback)
+        internal ValueTask StartAsync(TcpClient tcpClient, ITcpSerializer<TSocketData> tcpSerializer, object lockObject, Action<ITcpContext, object> log, 
+            Action<ITcpContext> disconnectedCallback, byte[] outBuffer)
         {
             _disconnectedCallback = disconnectedCallback;
             _lockObject = lockObject;
-            _outDataSender = outDataSender;
             TcpClient = tcpClient;
             SocketStream = TcpClient.GetStream();
             TcpSerializer = tcpSerializer;
@@ -290,10 +287,10 @@ namespace MyTcpSockets
             Connected = true;
             SocketStatistic = new SocketStatistic();
             DataToSend = new SendDataQueue(lockObject);
+            _bufferToSend = outBuffer;
             return OnConnectAsync();
         }
     }
-
 
     public abstract class ClientTcpContext<TSocketData> : TcpContext<TSocketData>
     {

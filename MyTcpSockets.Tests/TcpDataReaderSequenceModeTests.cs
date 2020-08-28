@@ -27,6 +27,7 @@ namespace MyTcpSockets.Tests
         {
             var trafficReader = new TcpDataReader();
 
+            
             var incomingArray1 = new byte[] {1, 2, 3, 4, 5};
             var incomingArray2 = new byte[] {11, 12, 13, 4, 5};
 
@@ -39,6 +40,26 @@ namespace MyTcpSockets.Tests
 
             data = trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, token.Token).Result;
             TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {12, 13, 4, 5}), data);
+        }  
+        
+        [Test]
+        public void TestFindingTheSequenceRightAway()
+        {
+            var trafficReader = new TcpDataReader();
+
+            
+            var incomingArray1 = new byte[] {1, 2, 3, 4, 5};
+            var incomingArray2 = new byte[] {11, 12, 13, 4, 5};
+
+            trafficReader.NewPackage(incomingArray1);
+            trafficReader.NewPackage(incomingArray2);
+
+            var token = new CancellationTokenSource();
+            var data = trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, token.Token).Result;
+            TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {1, 2, 3, 4, 5}), data);
+
+            data = trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, token.Token).Result;
+            TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {11, 12, 13, 4, 5}), data);
         }  
         
         
@@ -58,6 +79,27 @@ namespace MyTcpSockets.Tests
 
             data = trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, token.Token).Result;
             TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {12, 13, 4, 5}), data);
+        } 
+        
+        
+        [Test]
+        public void TestFindingSequenceWithTwoAsOnePieceAndOtherComplete()
+        {
+            var trafficReader = new TcpDataReader();
+            
+            var token = new CancellationTokenSource();
+            var dataTask = trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{14, 15}, token.Token);
+
+            trafficReader.NewPackage(new byte[] {1, 2, 3, 4, 5});
+            trafficReader.NewPackage(new byte[] {11, 12, 13, 14, 15});
+            
+            trafficReader.NewPackage(new byte[] {21, 22, 23, 14, 15});
+            
+            var data = dataTask.Result;
+            TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {1, 2, 3, 4, 5, 11, 12, 13, 14, 15}), data);
+
+            data = trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{14, 15}, token.Token).Result;
+            TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {21, 22, 23, 14, 15}), data);
         } 
     }
 }

@@ -9,6 +9,8 @@ namespace MyTcpSockets
         public DateTime LastSendTime { get; private set; }= DateTime.UtcNow;
         public DateTime LastReceiveTime { get; private set; }= DateTime.UtcNow;
         
+        public DateTime LastPingSentDateTime { get; set; } = DateTime.UtcNow;
+        
         public DateTime DisconnectionTime { get; private set; } = DateTime.UtcNow;
         
         public long SentPerSecond { get; private set; }
