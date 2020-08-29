@@ -11,11 +11,9 @@ namespace MyTcpSockets
 
             if (tcpContext.Inited)
             {
-                if (now - tcpContext.SocketStatistic.LastReceiveTime > receiveTimeOut)
+                if (now - tcpContext.SocketStatistic.LastReceiveTime > receiveTimeOut && now - tcpContext.SocketStatistic.LastSendTime > receiveTimeOut)
                     return true; 
                 
-                if (now - tcpContext.SocketStatistic.LastSendTime > receiveTimeOut)
-                    return true; 
             }
             else
             {
