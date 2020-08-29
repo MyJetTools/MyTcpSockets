@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using MyTcpSockets.DataSender;
 
 namespace MyTcpSockets
 {
@@ -16,6 +16,12 @@ namespace MyTcpSockets
         private readonly int _sendBufferSize;
         private Action<ITcpContext, object> _log;
         
+        public TimeSpan ReceiveDataTimeoutToKill { get; private set; } = TimeSpan.FromMinutes(1);
+        
+        /// <summary>
+        /// When connection is established - init package must be sent by client to make sure it's a valid connection;
+        /// </summary>
+        public TimeSpan InitTimeoutToKill { get; private set; } = TimeSpan.FromSeconds(5);
         
         private readonly object _lockObject = new object();
 
@@ -25,7 +31,6 @@ namespace MyTcpSockets
             _sendBufferSize = sendBufferSize;
             _connections = new Connections<TSocketData>();
         }
-
 
         public MyServerTcpSocket<TSocketData> AddLog(Action<ITcpContext, object> log)
         {
@@ -48,6 +53,18 @@ namespace MyTcpSockets
             return this;
         }
 
+        public MyServerTcpSocket<TSocketData> SetReceiveDataTimeoutToKill(TimeSpan timeSpan)
+        {
+            ReceiveDataTimeoutToKill = timeSpan;
+            return this;
+        }
+        
+        public MyServerTcpSocket<TSocketData> SetInitTimeoutToKill(TimeSpan timeSpan)
+        {
+            InitTimeoutToKill = timeSpan;
+            return this;
+        }
+
 
 
         private async Task CheckDeadConnectionsLoopAsync()
@@ -59,18 +76,17 @@ namespace MyTcpSockets
                 var connections =
                     _connections.GetAllConnections();
 
-                foreach (var connection in connections)
+                foreach (var connection in connections.Where(itm => itm.Connected))
                 {
                     try
                     {
                         connection.SocketStatistic.EachSecondTimer();
 
-                        if ((now - connection.SocketStatistic.LastReceiveTime).TotalMinutes >= 1)
-                        {
-                            _log.Invoke(connection, $"Found dead connection {connection.ContextName} with ID {connection.Id}. Disconnecting...");
-                            await connection.DisconnectAsync();
-                        }
-
+                        if (!connection.IsServerSocketDead(now, ReceiveDataTimeoutToKill, InitTimeoutToKill)) 
+                            continue;
+                        
+                        _log.Invoke(connection, $"Found dead connection {connection.ContextName} with ID {connection.Id}. Disconnecting...");
+                        await connection.DisconnectAsync();
                     }
                     catch (Exception e)
                     {
@@ -183,7 +199,6 @@ namespace MyTcpSockets
             _theTask.Wait();
             
         }
-   
 
         public int Count => _connections.Count;
 

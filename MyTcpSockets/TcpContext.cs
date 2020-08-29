@@ -12,14 +12,16 @@ namespace MyTcpSockets
    public interface ITcpContext
     {
         Stream SocketStream { get; }
-        
-        SendDataQueue DataToSend { get; }
 
         ValueTask DisconnectAsync();
+        
+        SocketStatistic SocketStatistic { get; }
         
         long Id { get; }
         
         bool Connected { get; } 
+        
+        bool Inited { get; }
     }
     
     
@@ -32,10 +34,6 @@ namespace MyTcpSockets
         public Stream SocketStream { get; private set; }
         
         public long Id { get; internal set; }
-
-        public SendDataQueue DataToSend { get; private set; }
-        
-        private readonly ProducerConsumer<ITcpContext> _producerConsumer = new ProducerConsumer<ITcpContext>();
 
         public ValueTask DisconnectAsync()
         {
@@ -53,13 +51,11 @@ namespace MyTcpSockets
             
             lock (_lockObject)
             {
-  
                 
                 if (!Connected)
                     return new ValueTask();
 
                 Connected = false;
-                
 
             }
             WriteLog($"Socket {ContextName} is Disconnected with Ip:{TcpClient.Client.RemoteEndPoint}. Id=" + Id);
@@ -67,7 +63,6 @@ namespace MyTcpSockets
             try
             {
                 _cancellationToken.Cancel(true);
-                _producerConsumer.Stop();
             }
             catch (Exception e)
             {
@@ -76,7 +71,7 @@ namespace MyTcpSockets
             
             try
             {
-                DataToSend.Clear();
+
                 SocketStatistic.WeHaveDisconnect();
             }
             catch (Exception e)
@@ -92,7 +87,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                WriteLog("SocketStream.Close(). "+e);
+                WriteLog("SocketStream.Close(): "+e);
             }     
             
             try
@@ -101,7 +96,16 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                WriteLog("TcpClient.Close(). "+e);
+                WriteLog("TcpClient.Close(): "+e);
+            }
+
+            try
+            {
+                _outDataSender.StopAsync();
+            }
+            catch (Exception e)
+            {
+                WriteLog("_outDataSender.Stop(): "+e);
             }
 
             return result;
@@ -149,9 +153,6 @@ namespace MyTcpSockets
             }
 
         }
-        
-        
-        
 
         internal async Task ReadLoopAsync()
         {
@@ -184,52 +185,21 @@ namespace MyTcpSockets
             }
         }
 
-
-
-        internal Task ReadLoopTask;
+        protected Task ReadLoopTask { get; private set; }
         internal void StartReadThread()
         {
             ReadLoopTask = ReadLoopAsync();
         }
 
 
-
-        private Task _writeTask;
-        private byte[] _bufferToSend;
-        private async Task ConsumerAsync()
-        {
-            while (Connected)
-            {
-                try
-                {
-                    await _producerConsumer.ConsumeAsync();
-                    var sendData = DataToSend.Dequeue(_bufferToSend);
-                    await SocketStream.WriteAsync(sendData);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    throw;
-                }
-                
-            }
-            
-        }
-
+        private OutDataSender _outDataSender;
         public void SendPacket(TSocketData data)
         {
             if (!Connected)
                 return;
 
             var dataToSend = TcpSerializer.Serialize(data);
-            DataToSend.Enqueue(dataToSend);
-            _producerConsumer.Produce(this);
-
-            if (_writeTask != null) return;
-            
-            lock (_lockObject)
-                _writeTask ??= ConsumerAsync();
-
+            _outDataSender.PushData(dataToSend);
         }
 
         private async ValueTask ProcessOnDisconnectAsync()
@@ -249,13 +219,14 @@ namespace MyTcpSockets
         protected void SetContextName(string contextName)
         {
             ContextName = contextName;
+            Inited = true;
             WriteLog($"Changed context name to: {contextName} for socket id: {Id} with ip: {TcpClient.Client.RemoteEndPoint}");
         }
 
         public SocketStatistic SocketStatistic { get; private set; }
 
         public bool Connected { get; private set; }
-
+        public bool Inited { get; private set; }
 
         private Action<ITcpContext, object> _log;
 
@@ -286,8 +257,7 @@ namespace MyTcpSockets
             _log = log;
             Connected = true;
             SocketStatistic = new SocketStatistic();
-            DataToSend = new SendDataQueue(lockObject);
-            _bufferToSend = outBuffer;
+            _outDataSender = new OutDataSender(this, lockObject, outBuffer, log);
             return OnConnectAsync();
         }
     }

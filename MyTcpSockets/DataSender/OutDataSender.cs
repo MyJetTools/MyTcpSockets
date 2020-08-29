@@ -1,50 +1,62 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using MyTcpSockets.DataSender;
 
-namespace MyTcpSockets
+namespace MyTcpSockets.DataSender
 {
 
     public class OutDataSender
     {
 
-        private readonly Dictionary<long, ITcpContext> _socketsWithData = new Dictionary<long, ITcpContext>();
-
         private readonly byte[] _bufferToSend;
         
         private readonly ProducerConsumer<ITcpContext> _producerConsumer = new ProducerConsumer<ITcpContext>();
 
-        public OutDataSender(int maxPacketSize)
-        {
-            _bufferToSend = new byte[maxPacketSize];
-        }
+        private readonly SendDataQueue _sendDataQueue;
 
-        private Action<ITcpContext, object> _log;
+        private readonly object _lockObject;
 
-        public void RegisterLog(Action<ITcpContext, object> log)
+        private readonly ITcpContext _tcpContext;
+
+        public OutDataSender(ITcpContext tcpContext, object lockObject, byte[] bufferToSend, Action<ITcpContext, object> log)
         {
+            _tcpContext = tcpContext;
+            _lockObject = lockObject;
+            _sendDataQueue = new SendDataQueue(lockObject);
+            _bufferToSend = bufferToSend;
             _log = log;
+            Start();
         }
 
-        private bool Working { get; set; }
+        private readonly Action<ITcpContext, object> _log;
+
+        public bool Working { get; private set; }
+        
+        
+        private Task _writeTask;
 
 
-        public void PushData(ITcpContext tcpContext)
+        public void PushData(ReadOnlyMemory<byte> dataToSend)
         {
-            _producerConsumer.Produce(tcpContext);
+            _sendDataQueue.Enqueue(dataToSend);
+            _producerConsumer.Produce(_tcpContext);
+            
+            
+            if (_writeTask != null) return;
+            
+            lock (_lockObject)
+                _writeTask ??= WriteThreadAsync();
+
         }
 
 
         private async Task WriteThreadAsync()
         {
-
-            while (Working)
+            while (_tcpContext.Connected)
             {
-
                 var tcpContext = await _producerConsumer.ConsumeAsync();
 
-                var sendData = tcpContext.DataToSend.Dequeue(_bufferToSend);
+                var sendData = _sendDataQueue.Dequeue(_bufferToSend);
+
                 if (sendData.Length > 0)
                     try
                     {
@@ -56,27 +68,26 @@ namespace MyTcpSockets
                         _log?.Invoke(tcpContext, e);
 
                         await tcpContext.DisconnectAsync();
-
                     }
-
             }
 
         }
 
         private Task _task;
 
-        public void Start()
+        private void Start()
         {
             Working = true;
 
             _task = WriteThreadAsync();
         }
 
-        public void Stop()
+        public Task StopAsync()
         {
             Working = false;
             _producerConsumer.Stop();
-            _task.Wait();
+            _sendDataQueue.Clear();
+            return _task;
         }
 
     }
