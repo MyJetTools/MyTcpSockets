@@ -9,11 +9,19 @@ namespace MyTcpSockets
             TimeSpan receiveTimeOut, TimeSpan initTimeOut)
         {
 
-            if (now - tcpContext.SocketStatistic.LastReceiveTime > receiveTimeOut)
-                return true;
-            
-            if (!tcpContext.Inited && now - tcpContext.SocketStatistic.LastSendTime > initTimeOut)
-                return true;
+            if (tcpContext.Inited)
+            {
+                if (now - tcpContext.SocketStatistic.LastReceiveTime > receiveTimeOut)
+                    return true; 
+                
+                if (now - tcpContext.SocketStatistic.LastSendTime > receiveTimeOut)
+                    return true; 
+            }
+            else
+            {
+                if (now - tcpContext.SocketStatistic.LastReceiveTime > initTimeOut)
+                    return true;
+            }
 
             return false;
         }
