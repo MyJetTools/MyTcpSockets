@@ -60,7 +60,10 @@ namespace MyTcpSockets.DataSender
                 if (sendData.Length > 0)
                     try
                     {
+                        var dt = DateTime.UtcNow;
                         await tcpContext.SocketStream.WriteAsync(sendData);
+                        tcpContext.SocketStatistic.WeHaveSendEvent(sendData.Length);
+                        tcpContext.SocketStatistic.LastSendToSocketDuration = DateTime.UtcNow - dt;
                     }
                     catch (Exception e)
                     {

@@ -6,18 +6,18 @@ namespace MyTcpSockets
     {
 
         public static bool IsServerSocketDead(this ITcpContext tcpContext, DateTime now, 
-            TimeSpan receiveTimeOut, TimeSpan initTimeOut)
+            TimeSpan activityTimeOut, TimeSpan initTimeOut)
         {
 
             if (tcpContext.Inited)
             {
-                if (now - tcpContext.SocketStatistic.LastReceiveTime > receiveTimeOut && now - tcpContext.SocketStatistic.LastSendTime > receiveTimeOut)
+                if (now - tcpContext.SocketStatistic.LastReceiveTime > activityTimeOut && now - tcpContext.SocketStatistic.LastSendTime > activityTimeOut)
                     return true; 
                 
             }
             else
             {
-                if (now - tcpContext.SocketStatistic.LastReceiveTime > initTimeOut)
+                if (now - tcpContext.SocketStatistic.LastReceiveTime > initTimeOut && now - tcpContext.SocketStatistic.LastSendTime > activityTimeOut)
                     return true;
             }
 

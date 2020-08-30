@@ -13,6 +13,8 @@ namespace MyTcpSockets
         
         public DateTime DisconnectionTime { get; private set; } = DateTime.UtcNow;
         
+        public TimeSpan LastSendToSocketDuration { get; set; }
+        
         public long SentPerSecond { get; private set; }
         
         public long ReceivedPerSecond { get; private set; }
