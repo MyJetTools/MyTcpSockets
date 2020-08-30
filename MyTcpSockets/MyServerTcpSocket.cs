@@ -15,7 +15,7 @@ namespace MyTcpSockets
         private readonly IPEndPoint _ipEndPoint;
         private readonly int _sendBufferSize;
         private Action<ITcpContext, object> _log;
-        
+
         public TimeSpan ReceiveDataTimeoutToKill { get; private set; } = TimeSpan.FromMinutes(1);
         
         /// <summary>
@@ -25,7 +25,7 @@ namespace MyTcpSockets
         
         private readonly object _lockObject = new object();
 
-        public MyServerTcpSocket(IPEndPoint ipEndPoint, int sendBufferSize = 1024 * 1024)
+        public MyServerTcpSocket(IPEndPoint ipEndPoint, int sendBufferSize = 0)
         {
             _ipEndPoint = ipEndPoint;
             _sendBufferSize = sendBufferSize;
@@ -103,8 +103,10 @@ namespace MyTcpSockets
         private async Task KickOffNewSocketAsync(TcpContext<TSocketData> tcpContext, TcpClient acceptedSocket)
         {
 
+            var bufferToSend = _sendBufferSize > 0 ? new byte[_sendBufferSize] : null;
+
             await tcpContext.StartAsync(acceptedSocket, _getSerializer(), _lockObject, _log,
-                socket => { _connections.RemoveSocket(socket.Id); }, new byte[_sendBufferSize]);
+                socket => { _connections.RemoveSocket(socket.Id); }, bufferToSend);
 
             _log?.Invoke(tcpContext,
                 $"Socket Accepted; Ip:{acceptedSocket.Client.RemoteEndPoint}. Id=" + tcpContext.Id);

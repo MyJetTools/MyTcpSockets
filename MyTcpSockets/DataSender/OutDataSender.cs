@@ -58,20 +58,8 @@ namespace MyTcpSockets.DataSender
                 var sendData = _sendDataQueue.Dequeue(_bufferToSend);
 
                 if (sendData.Length > 0)
-                    try
-                    {
-                        var dt = DateTime.UtcNow;
-                        await tcpContext.SocketStream.WriteAsync(sendData);
-                        tcpContext.SocketStatistic.WeHaveSendEvent(sendData.Length);
-                        tcpContext.SocketStatistic.LastSendToSocketDuration = DateTime.UtcNow - dt;
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        _log?.Invoke(tcpContext, e);
+                    await tcpContext.SendDataToSocketAsync(sendData);
 
-                        await tcpContext.DisconnectAsync();
-                    }
             }
 
         }

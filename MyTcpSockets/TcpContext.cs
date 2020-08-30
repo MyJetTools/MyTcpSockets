@@ -22,6 +22,8 @@ namespace MyTcpSockets
         bool Connected { get; } 
         
         bool Inited { get; }
+
+        ValueTask SendDataToSocketAsync(ReadOnlyMemory<byte> data);
     }
     
     
@@ -101,7 +103,7 @@ namespace MyTcpSockets
 
             try
             {
-                _outDataSender.StopAsync();
+                _outDataSender?.StopAsync();
             }
             catch (Exception e)
             {
@@ -193,13 +195,19 @@ namespace MyTcpSockets
 
 
         private OutDataSender _outDataSender;
-        public void SendPacket(TSocketData data)
+
+        public ValueTask SendPacketAsync(TSocketData data)
         {
             if (!Connected)
-                return;
+                return new ValueTask();
 
             var dataToSend = TcpSerializer.Serialize(data);
+            if (_outDataSender == null) 
+                return ((ITcpContext) this).SendDataToSocketAsync(dataToSend);
+            
             _outDataSender.PushData(dataToSend);
+            return new ValueTask();
+
         }
 
         private async ValueTask ProcessOnDisconnectAsync()
@@ -227,6 +235,25 @@ namespace MyTcpSockets
 
         public bool Connected { get; private set; }
         public bool Inited { get; private set; }
+        async ValueTask ITcpContext.SendDataToSocketAsync(ReadOnlyMemory<byte> sendData)
+        {
+            
+            try
+            {
+                var dt = DateTime.UtcNow;
+                await SocketStream.WriteAsync(sendData);
+                SocketStatistic.WeHaveSendEvent(sendData.Length);
+                SocketStatistic.LastSendToSocketDuration = DateTime.UtcNow - dt;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                _log?.Invoke(this, e);
+
+                await DisconnectAsync();
+            }
+
+        }
 
         private Action<ITcpContext, object> _log;
 
@@ -257,7 +284,10 @@ namespace MyTcpSockets
             _log = log;
             Connected = true;
             SocketStatistic = new SocketStatistic();
-            _outDataSender = new OutDataSender(this, lockObject, outBuffer, log);
+            
+            if (outBuffer != null)
+                _outDataSender = new OutDataSender(this, lockObject, outBuffer, log);
+            
             return OnConnectAsync();
         }
     }
