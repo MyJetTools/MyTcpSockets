@@ -25,12 +25,14 @@ namespace MyTcpSockets
         private TimeSpan _disconnectInterval;
 
         private readonly byte[] _outBuffer;
-        public MyClientTcpSocket(Func<string> getHostPort, TimeSpan reconnectTimeOut, int sendBufferSize = 1024 * 1024)
+        public MyClientTcpSocket(Func<string> getHostPort, TimeSpan reconnectTimeOut, int sendBufferSize = 0)
         {
             _getHostPort = getHostPort;
             _reconnectTimeOut = reconnectTimeOut;
             SetPingInterval(TimeSpan.FromSeconds(3));
-            _outBuffer = new byte[sendBufferSize];
+            
+            if(sendBufferSize > 0)
+                _outBuffer = new byte[sendBufferSize];
         }
 
         public MyClientTcpSocket<TSocketData> AddLog(Action<ITcpContext, object> log)
