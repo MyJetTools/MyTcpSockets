@@ -16,18 +16,6 @@ namespace MyTcpSockets.Tests
             return new ReadOnlyMemory<T>(mem.Skip(from).Take(size).ToArray());
         }
         
-        public static void ArraysAreEqual(this ReadOnlyMemory<byte> from, ReadOnlyMemory<byte> to)
-        {
-            var fromSpan = from.Span;
-            var toSpan = to.Span;
-            Assert.IsTrue(from.Length == to.Length);
-
-            for (var i = 0; i < fromSpan.Length; i++)
-            {
-                Assert.AreEqual(fromSpan[i], toSpan[i]);
-            }
-        }
-        
         public static void ArraysAreEqual(this byte[] from, ReadOnlyMemory<byte> to)
         {
             var toSpan = to.Span;
@@ -45,6 +33,11 @@ namespace MyTcpSockets.Tests
             {
                 dest.Span[i] = src[i];
             }
+        }
+
+        public static void PrepareTest()
+        {
+            SocketMemoryUtils.AllocateByteArray = size => GC.AllocateUninitializedArray<byte>(size);
         }
     }
 }

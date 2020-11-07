@@ -6,8 +6,6 @@ namespace MyTcpSockets.Extensions
     public static class TcpDataPieceUtils
     {
 
-
-
         private static ReadOnlyMemory<byte> GetAsSingleElement(this List<TcpDataPiece> dataList, int size)
         {
             var firstElement = dataList[0];
@@ -19,10 +17,9 @@ namespace MyTcpSockets.Extensions
             return resultAsSingleElement;
         }
 
-
         private static byte[] CompileResult(this List<TcpDataPiece> dataList, int size)
         {
-            var result = new byte[size];
+            var result = SocketMemoryUtils.AllocateByteArray(size);
             var position = 0;
             var remainSize = size;
             

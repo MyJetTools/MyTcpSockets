@@ -5,6 +5,14 @@ namespace MyTcpSockets.Tests
 {
     public class TcpSequenceDataPipeSimpleTests
     {
+
+        [SetUp]
+        public void Init()
+        {
+            TestUtils.PrepareTest();
+        }
+        
+        
         [Test]
         public void TestSingleCalculation()
         {

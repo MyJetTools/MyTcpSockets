@@ -5,6 +5,13 @@ namespace MyTcpSockets.Tests
 {
     public class TestAsyncMutex
     {
+        
+        [SetUp]
+        public void Init()
+        {
+            TestUtils.PrepareTest();
+        }
+        
         [Test]
         public void TestGoAhead()
         {

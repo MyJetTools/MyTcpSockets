@@ -7,6 +7,12 @@ namespace MyTcpSockets.Tests
 {
     public class TestEndDataQueue
     {
+        
+        [SetUp]
+        public void Init()
+        {
+            TestUtils.PrepareTest();
+        }
 
         [Test]
         public void TestOnePacketOneData()

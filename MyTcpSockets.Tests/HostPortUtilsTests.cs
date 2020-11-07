@@ -6,6 +6,12 @@ namespace MyTcpSockets.Tests
 {
     public class HostPortUtilsTests
     {
+        
+        [SetUp]
+        public void Init()
+        {
+            TestUtils.PrepareTest();
+        }
 
         [Test]
         public async Task ParseSimpleIp()
@@ -31,7 +37,6 @@ namespace MyTcpSockets.Tests
                 Console.WriteLine(hostPort);
                 Assert.AreEqual(4565, hostPort.Port);
             }
-            
         }
     }
 }

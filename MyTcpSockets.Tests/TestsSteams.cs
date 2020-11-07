@@ -1,10 +1,18 @@
 using System.IO;
+using MyTcpSockets.Extensions;
 using NUnit.Framework;
 
-namespace MyTcpSockets.Extensions.Tests
+namespace MyTcpSockets.Tests
 {
     public class TestsSteams
     {
+        
+        [SetUp]
+        public void Init()
+        {
+            TestUtils.PrepareTest();
+        }
+        
         
         [Test]
         public void TestShort()

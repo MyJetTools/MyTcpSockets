@@ -1,13 +1,19 @@
 using System;
 using System.Threading;
 using MyTcpSockets.Extensions;
-using MyTcpSockets.Extensions.Tests;
 using NUnit.Framework;
 
 namespace MyTcpSockets.Tests
 {
     public class TcpDataReaderSizeTests
     {
+        
+        [SetUp]
+        public void Init()
+        {
+            TestUtils.PrepareTest();
+        }
+        
 
         [Test]
         public void TestBasicFeature()
@@ -88,10 +94,10 @@ namespace MyTcpSockets.Tests
             var token = new CancellationTokenSource();
             var data = trafficReader.ReadAsyncAsync(3, token.Token).Result;
 
-            TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}), data);
+            new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}).ArraysAreEqual(data);
             
             data = trafficReader.ReadAsyncAsync(10, token.Token).Result;
-            TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11, 22, 33, 44, 55, 66, 111}), data);
+            new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11, 22, 33, 44, 55, 66, 111}).ArraysAreEqual(data);
 
         }
 

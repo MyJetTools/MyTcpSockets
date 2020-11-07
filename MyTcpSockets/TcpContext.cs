@@ -127,7 +127,7 @@ namespace MyTcpSockets
 
             try
             {
-                var socketBuffer = new byte[TcpSerializer.BufferSize];
+                var socketBuffer = SocketMemoryUtils.AllocateByteArray(TcpSerializer.BufferSize);
 
                 var readSize =
                     await SocketStream.ReadAsync(socketBuffer, 0, socketBuffer.Length, _cancellationToken.Token);
@@ -138,7 +138,7 @@ namespace MyTcpSockets
 
                     trafficReader.NewPackage(socketBuffer, readSize);
 
-                    socketBuffer = new byte[TcpSerializer.BufferSize];
+                    socketBuffer = SocketMemoryUtils.AllocateByteArray(TcpSerializer.BufferSize);
 
                     readSize =
                         await SocketStream.ReadAsync(socketBuffer, 0, socketBuffer.Length, _cancellationToken.Token);

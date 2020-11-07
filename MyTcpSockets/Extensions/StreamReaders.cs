@@ -28,7 +28,7 @@ namespace MyTcpSockets.Extensions
 
         public static async Task<byte[]> CreateArrayAndReaderItFromSocketAsync(this Stream stream, int size)
         {
-            var result = new byte[size];
+            var result = SocketMemoryUtils.AllocateByteArray(size);
             var read = 0;
 
             while (read < size)
@@ -47,7 +47,7 @@ namespace MyTcpSockets.Extensions
 
         public static async ValueTask<ReadOnlyMemory<byte>> ReadAsMuchAsPossibleAsync(this Stream stream, int bufferSize)
         {
-            var buffer = new byte[bufferSize];
+            var buffer = SocketMemoryUtils.AllocateByteArray(bufferSize);
 
             var readSize = await stream.ReadAsync(buffer, 0, bufferSize);
 

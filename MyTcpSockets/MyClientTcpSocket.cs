@@ -32,7 +32,7 @@ namespace MyTcpSockets
             SetPingInterval(TimeSpan.FromSeconds(3));
             
             if(sendBufferSize > 0)
-                _outBuffer = new byte[sendBufferSize];
+                _outBuffer = SocketMemoryUtils.AllocateByteArray(sendBufferSize);
         }
 
         public MyClientTcpSocket<TSocketData> AddLog(Action<ITcpContext, object> log)

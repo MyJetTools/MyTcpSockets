@@ -5,6 +5,12 @@ namespace MyTcpSockets.Tests
 {
     public class TestProducerConsumer
     {
+        [SetUp]
+        public void Init()
+        {
+            TestUtils.PrepareTest();
+        }
+        
         [Test]
         public void BasicTest()
         {

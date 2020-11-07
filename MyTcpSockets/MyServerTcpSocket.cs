@@ -103,7 +103,7 @@ namespace MyTcpSockets
         private async Task KickOffNewSocketAsync(TcpContext<TSocketData> tcpContext, TcpClient acceptedSocket)
         {
 
-            var bufferToSend = _sendBufferSize > 0 ? new byte[_sendBufferSize] : null;
+            var bufferToSend = _sendBufferSize > 0 ? SocketMemoryUtils.AllocateByteArray(_sendBufferSize) : null;
 
             await tcpContext.StartAsync(acceptedSocket, _getSerializer(), _lockObject, _log,
                 socket => { _connections.RemoveSocket(socket.Id); }, bufferToSend);
