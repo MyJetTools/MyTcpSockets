@@ -4,26 +4,19 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using MyTcpSockets.Extensions;
-using MyTcpSockets.DataSender;
 
 namespace MyTcpSockets
 {
 
    public interface ITcpContext
     {
-        Stream SocketStream { get; }
-
-        ValueTask DisconnectAsync();
-        
         SocketStatistic SocketStatistic { get; }
         
         long Id { get; }
         
-        bool Connected { get; } 
         
         bool Inited { get; }
 
-        ValueTask SendDataToSocketAsync(ReadOnlyMemory<byte> data);
     }
     
     
@@ -36,8 +29,19 @@ namespace MyTcpSockets
         public Stream SocketStream { get; private set; }
         
         public long Id { get; internal set; }
+        
+        protected ITcpSerializer<TSocketData> TcpSerializer { get; private set; }
+        protected abstract ValueTask OnConnectAsync();
+        protected abstract ValueTask OnDisconnectAsync();
+        protected abstract ValueTask HandleIncomingDataAsync(TSocketData data);
+        
+        private readonly CancellationTokenSource _cancellationToken = new CancellationTokenSource();
 
-        public ValueTask DisconnectAsync()
+        #region Disconnect
+        
+        private Action<ITcpContext> _disconnectedCallback;
+        
+        public void Disconnect()
         {
             if (_disconnectedCallback != null)
             {
@@ -55,7 +59,7 @@ namespace MyTcpSockets
             {
                 
                 if (!Connected)
-                    return new ValueTask();
+                    return;
 
                 Connected = false;
 
@@ -81,8 +85,6 @@ namespace MyTcpSockets
                 WriteLog("SocketStatistic Disconnect: "+e);
             }
             
-            var result = ProcessOnDisconnectAsync();
-            
             try
             {
                 SocketStream.Close();
@@ -100,49 +102,78 @@ namespace MyTcpSockets
             {
                 WriteLog("TcpClient.Close(): "+e);
             }
-
+            
             try
             {
-                _outDataSender?.StopAsync();
+                _asyncLock.Dispose();
             }
             catch (Exception e)
             {
-                WriteLog("_outDataSender.Stop(): "+e);
+                WriteLog("_asyncLock.Dispose(): "+e);
             }
-
-            return result;
-
+            
+            
+            Task.Run(ProcessOnDisconnectAsync);
         }
         
-        protected ITcpSerializer<TSocketData> TcpSerializer { get; private set; }
-        protected abstract ValueTask OnConnectAsync();
-        protected abstract ValueTask OnDisconnectAsync();
-        protected abstract ValueTask HandleIncomingDataAsync(TSocketData data);
-        
-        private readonly CancellationTokenSource _cancellationToken = new CancellationTokenSource();
+        private async ValueTask ProcessOnDisconnectAsync()
+        {
+            try
+            {
+                await OnDisconnectAsync();
+            }
+            catch (Exception e)
+            {
+                WriteLog(e);
+            }
+        }
+        #endregion
 
 
+        #region Read
         private async Task PublishDataToTrafficReaderAsync(TcpDataReader trafficReader)
         {
 
+
             try
             {
-                var socketBuffer = SocketMemoryUtils.AllocateByteArray(TcpSerializer.BufferSize);
+#if NETSTANDARD2_1
+                var buffer = trafficReader.AllocateBufferToWrite();
 
                 var readSize =
-                    await SocketStream.ReadAsync(socketBuffer, 0, socketBuffer.Length, _cancellationToken.Token);
+                    await SocketStream.ReadAsync(buffer, _cancellationToken.Token);
 
                 while (readSize > 0)
                 {
                     SocketStatistic.WeHaveReceiveEvent(readSize);
 
-                    trafficReader.NewPackage(socketBuffer, readSize);
+                    trafficReader.CommitWrittenData(readSize);
 
-                    socketBuffer = SocketMemoryUtils.AllocateByteArray(TcpSerializer.BufferSize);
+                    buffer = trafficReader.AllocateBufferToWrite();
 
                     readSize =
-                        await SocketStream.ReadAsync(socketBuffer, 0, socketBuffer.Length, _cancellationToken.Token);
+                        await SocketStream.ReadAsync(buffer, _cancellationToken.Token);
                 }
+#else
+
+
+                var buffer = trafficReader.AllocateBufferToWriteLegacy();
+                
+                var readSize =
+                    await SocketStream.ReadAsync(buffer.buffer, buffer.start, buffer.len, _cancellationToken.Token);
+
+                while (readSize > 0)
+                {
+                    SocketStatistic.WeHaveReceiveEvent(readSize);
+
+                    trafficReader.CommitWrittenData(readSize);
+
+                    buffer = trafficReader.AllocateBufferToWriteLegacy();
+
+                    readSize =
+                        await SocketStream.ReadAsync(buffer.buffer, buffer.start, buffer.len, _cancellationToken.Token);
+                }           
+#endif
             }
             catch (Exception e)
             {
@@ -151,16 +182,16 @@ namespace MyTcpSockets
             finally
             {
                 WriteLog("Disconnected from Traffic Reader Loop");
-                await trafficReader.StopAsync();
+                trafficReader.Stop();
             }
 
         }
 
-        internal async Task ReadLoopAsync()
+        private async Task ReadLoopAsync(int bufferSize, int minAllocationSize)
         {
             try
             {
-                var trafficReader = new TcpDataReader();
+                var trafficReader = new TcpDataReader(bufferSize, minAllocationSize);
 
                 var trafficWriterTask = PublishDataToTrafficReaderAsync(trafficReader);
                 
@@ -183,44 +214,72 @@ namespace MyTcpSockets
             finally
             {
                 WriteLog("Disconnected from ReadLoopAsync");
-                await DisconnectAsync();
+                Disconnect();
             }
         }
 
         protected Task ReadLoopTask { get; private set; }
-        internal void StartReadThread()
+        internal void StartReadThread(int bufferSize, int minAllocationSize)
         {
-            ReadLoopTask = ReadLoopAsync();
+            ReadLoopTask = ReadLoopAsync(bufferSize, minAllocationSize);
         }
+        #endregion
 
+        
+        #region Write
+        private readonly SendDataQueue _sendDataQueue;
 
-        private OutDataSender _outDataSender;
+        private byte[] _deliveryBuffer;
+        
+        private readonly AsyncLock _asyncLock;
 
-        public ValueTask SendPacketAsync(TSocketData data)
+        private async ValueTask DeliverPacketAsync()
         {
-            if (!Connected)
-                return new ValueTask();
-
-            var dataToSend = TcpSerializer.Serialize(data);
-            if (_outDataSender == null) 
-                return ((ITcpContext) this).SendDataToSocketAsync(dataToSend);
-            
-            _outDataSender.PushData(dataToSend);
-            return new ValueTask();
-
-        }
-
-        private async ValueTask ProcessOnDisconnectAsync()
-        {
+            await _asyncLock.LockAsync();
             try
             {
-                await OnDisconnectAsync();
+                var dataToSend = _sendDataQueue.Dequeue(_deliveryBuffer);
+            
+                while (dataToSend.Length >0)
+                {
+                    try
+                    {
+                        var dt = DateTime.UtcNow;
+                        await SocketStream.WriteAsync(dataToSend);
+                        SocketStatistic.WeHaveSendEvent(dataToSend.Length);
+                        SocketStatistic.LastSendToSocketDuration = DateTime.UtcNow - dt;
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        _log?.Invoke(this, e);
+
+                        Disconnect();
+                        break;
+                    }
+                    dataToSend = _sendDataQueue.Dequeue(_deliveryBuffer);
+                }
             }
-            catch (Exception e)
+            finally
             {
-                WriteLog(e);
+                _asyncLock.Unlock();
             }
+       
         }
+
+        public void SendDataToSocket(TSocketData data)
+        {
+            if (!Connected)
+                return;
+
+            var dataToSend = TcpSerializer.Serialize(data);
+            
+            _sendDataQueue.Enqueue(dataToSend);
+            Task.Run(DeliverPacketAsync);
+        }
+        
+        #endregion
+
 
         public string ContextName { get; private set; }
 
@@ -235,25 +294,7 @@ namespace MyTcpSockets
 
         public bool Connected { get; private set; }
         public bool Inited { get; private set; }
-        async ValueTask ITcpContext.SendDataToSocketAsync(ReadOnlyMemory<byte> sendData)
-        {
-            
-            try
-            {
-                var dt = DateTime.UtcNow;
-                await SocketStream.WriteAsync(sendData);
-                SocketStatistic.WeHaveSendEvent(sendData.Length);
-                SocketStatistic.LastSendToSocketDuration = DateTime.UtcNow - dt;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                _log?.Invoke(this, e);
 
-                await DisconnectAsync();
-            }
-
-        }
 
         private Action<ITcpContext, object> _log;
 
@@ -270,10 +311,15 @@ namespace MyTcpSockets
         
         }
 
-        private Action<ITcpContext> _disconnectedCallback;
+
+        public TcpContext()
+        {
+            _asyncLock = new AsyncLock(_lockObject);
+            _sendDataQueue = new SendDataQueue(_lockObject);
+        }
 
         internal ValueTask StartAsync(TcpClient tcpClient, ITcpSerializer<TSocketData> tcpSerializer, object lockObject, Action<ITcpContext, object> log, 
-            Action<ITcpContext> disconnectedCallback, byte[] outBuffer)
+            Action<ITcpContext> disconnectedCallback, byte[] deliveryBuffer)
         {
             _disconnectedCallback = disconnectedCallback;
             _lockObject = lockObject;
@@ -284,9 +330,9 @@ namespace MyTcpSockets
             _log = log;
             Connected = true;
             SocketStatistic = new SocketStatistic();
-            
-            if (outBuffer != null)
-                _outDataSender = new OutDataSender(this, lockObject, outBuffer, log);
+
+            _deliveryBuffer = deliveryBuffer;
+
             
             return OnConnectAsync();
         }

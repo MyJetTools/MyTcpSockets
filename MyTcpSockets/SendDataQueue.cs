@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace MyTcpSockets.DataSender
+namespace MyTcpSockets
 {
     public class SendDataQueue
     {

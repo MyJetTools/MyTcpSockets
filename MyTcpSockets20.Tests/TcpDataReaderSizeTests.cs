@@ -11,11 +11,11 @@ namespace MyTcpSockets.Tests
         [Test]
         public void TestBasicFeature()
         {
-            var trafficReader = new TcpDataReader();
+            var trafficReader = new TcpDataReader(1024, 512);
 
             var incomingArray = new byte[] {1, 2, 3, 4, 5, 6};
 
-            trafficReader.NewPackage(incomingArray, incomingArray.Length);
+            trafficReader.NewPackage(incomingArray);
 
             var tc = new CancellationTokenSource();
             var data = trafficReader.ReadAsyncAsync(3, tc.Token).Result;
@@ -30,13 +30,13 @@ namespace MyTcpSockets.Tests
         [Test]
         public void TestOverflowFeature()
         {
-            var trafficReader = new TcpDataReader();
+            var trafficReader = new TcpDataReader(1024, 512);
 
             var incomingArray1 = new byte[] {1, 2, 3, 4, 5, 6};
             var incomingArray2 = new byte[] {11, 22, 33, 44, 55, 66};
 
-            trafficReader.NewPackage(incomingArray1, incomingArray1.Length);
-            trafficReader.NewPackage(incomingArray2, incomingArray2.Length);
+            trafficReader.NewPackage(incomingArray1);
+            trafficReader.NewPackage(incomingArray2);
 
             var tc = new CancellationTokenSource();
             var data = trafficReader.ReadAsyncAsync(3, tc.Token).Result;
@@ -51,7 +51,7 @@ namespace MyTcpSockets.Tests
         [Test]
         public void TestDoubleOverflowFeature()
         {
-            var trafficReader = new TcpDataReader();
+            var trafficReader = new TcpDataReader(1024, 512);
 
             var incomingArray1 = new byte[] {1, 2, 3, 4, 5, 6};
             var incomingArray2 = new byte[] {11, 22,};
@@ -64,17 +64,17 @@ namespace MyTcpSockets.Tests
             var tc = new CancellationTokenSource();
             var data = trafficReader.ReadAsyncAsync(3, tc.Token).Result;
 
-            TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}), data);
+            new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}).ArraysAreEqual(data);
 
             data = trafficReader.ReadAsyncAsync(6, tc.Token).Result;
-            TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11, 22, 111}), data);
+            new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11, 22, 111}).ArraysAreEqual(data);
 
         }
 
         [Test]
         public void TestDoubleVeryOverflowFeature()
         {
-            var trafficReader = new TcpDataReader();
+            var trafficReader = new TcpDataReader(1024, 512);
 
             var incomingArray1 = new byte[] {1, 2, 3, 4, 5, 6};
             var incomingArray2 = new byte[] {11, 22, 33, 44, 55, 66,};

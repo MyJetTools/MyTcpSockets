@@ -16,7 +16,7 @@ namespace MyTcpSockets.Tests
             return new ReadOnlyMemory<T>(mem.Skip(from).Take(size).ToArray());
         }
         
-        public static void ArraysAreEqual(this ReadOnlyMemory<byte> from, ReadOnlyMemory<byte> to)
+        public static void ArrayIsEqualWith(this ReadOnlyMemory<byte> from, ReadOnlyMemory<byte> to)
         {
             var fromSpan = from.Span;
             var toSpan = to.Span;

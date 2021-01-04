@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using MyTcpSockets.Extensions;
 using NUnit.Framework;
 
 namespace MyTcpSockets.Tests
@@ -38,6 +39,24 @@ namespace MyTcpSockets.Tests
         public static void PrepareTest()
         {
             SocketMemoryUtils.AllocateByteArray = size => GC.AllocateUninitializedArray<byte>(size);
+        }
+
+        public static void NewPackage(this TcpDataReader tcpDataReader, byte[] data)
+        {
+            var buf = tcpDataReader.AllocateBufferToWrite();
+            data.CopyTo(buf);
+            tcpDataReader.CommitWrittenData(data.Length);
+
+        }
+
+        public static void Print(this ReadOnlyMemory<byte> src)
+        {
+            Console.Write("[");
+            foreach (var b in src.Span)
+            {
+                Console.Write(b+",");
+            }
+            Console.WriteLine("]");
         }
     }
 }

@@ -19,20 +19,11 @@
 
 
     <ItemGroup>
+      <Compile Include="..\MyTcpSockets\AsyncLock.cs">
+        <Link>AsyncLock.cs</Link>
+      </Compile>
       <Compile Include="..\MyTcpSockets\Connections.cs">
         <Link>Connections.cs</Link>
-      </Compile>
-      <Compile Include="..\MyTcpSockets\DataSender\AsyncMutex.cs">
-        <Link>DataSender\AsyncMutex.cs</Link>
-      </Compile>
-      <Compile Include="..\MyTcpSockets\DataSender\OutDataSender.cs">
-        <Link>DataSender\OutDataSender.cs</Link>
-      </Compile>
-      <Compile Include="..\MyTcpSockets\DataSender\ProducerConsumer.cs">
-        <Link>DataSender\ProducerConsumer.cs</Link>
-      </Compile>
-      <Compile Include="..\MyTcpSockets\DataSender\SendDataQueue.cs">
-        <Link>DataSender\SendDataQueue.cs</Link>
       </Compile>
       <Compile Include="..\MyTcpSockets\Extensions\ITcpDataPipe.cs">
         <Link>Extensions\ITcpDataPipe.cs</Link>
@@ -42,12 +33,6 @@
       </Compile>
       <Compile Include="..\MyTcpSockets\Extensions\TcpDataPieceUtils.cs">
         <Link>Extensions\TcpDataPieceUtils.cs</Link>
-      </Compile>
-      <Compile Include="..\MyTcpSockets\Extensions\TcpDataPipeBySize.cs">
-        <Link>Extensions\TcpDataPipeBySize.cs</Link>
-      </Compile>
-      <Compile Include="..\MyTcpSockets\Extensions\TcpDataPipeSequence.cs">
-        <Link>Extensions\TcpDataPipeSequence.cs</Link>
       </Compile>
       <Compile Include="..\MyTcpSockets\Extensions\TcpDataReader.cs">
         <Link>TcpDataReader.cs</Link>
@@ -64,6 +49,9 @@
       <Compile Include="..\MyTcpSockets\MyServerTcpSocket.cs">
         <Link>MyServerTcpSocket.cs</Link>
       </Compile>
+      <Compile Include="..\MyTcpSockets\SendDataQueue.cs">
+        <Link>SendDataQueue.cs</Link>
+      </Compile>
       <Compile Include="..\MyTcpSockets\ServerSocketUtils.cs">
         <Link>ServerSocketUtils.cs</Link>
       </Compile>
@@ -75,6 +63,9 @@
       </Compile>
       <Compile Include="..\MyTcpSockets\TcpContext.cs">
         <Link>TcpContext.cs</Link>
+      </Compile>
+      <Compile Update="SendDataQueue.cs">
+        <Link>SendDataQueue.cs</Link>
       </Compile>
     </ItemGroup>
 

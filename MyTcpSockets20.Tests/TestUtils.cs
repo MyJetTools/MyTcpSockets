@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using MyTcpSockets.Extensions;
 using NUnit.Framework;
 
 namespace MyTcpSockets.Tests
@@ -16,7 +17,7 @@ namespace MyTcpSockets.Tests
             return new ReadOnlyMemory<T>(mem.Skip(from).Take(size).ToArray());
         }
         
-        public static void ArraysAreEqual(this ReadOnlyMemory<byte> from, ReadOnlyMemory<byte> to)
+        public static void ArraysIsEqualWith(this ReadOnlyMemory<byte> from, ReadOnlyMemory<byte> to)
         {
             var fromSpan = from.Span;
             var toSpan = to.Span;
@@ -26,6 +27,14 @@ namespace MyTcpSockets.Tests
             {
                 Assert.AreEqual(fromSpan[i], toSpan[i]);
             }
+        }
+
+
+        public static void NewPackage(this TcpDataReader tcpDataReader, byte[] data)
+        {
+            var buffer = tcpDataReader.AllocateBufferToWrite();
+            data.CopyTo(buffer);
+            tcpDataReader.CommitWrittenData(data.Length);
         }
     }
 }

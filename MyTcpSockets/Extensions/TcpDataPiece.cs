@@ -1,51 +1,92 @@
 using System;
+using System.Collections.Generic;
 
 namespace MyTcpSockets.Extensions
 {
     public class TcpDataPiece
     {
-        public TcpDataPiece(byte[] data, int length)
+        private readonly byte[] _data;
+
+        public int ReadyToReadStart { get; private set; }
+        public int ReadyToReadSize { get; private set; }
+
+        public int WriteIndex => ReadyToReadStart + ReadyToReadSize;
+
+        public int WriteSize => _data.Length - WriteIndex;
+
+        internal IEnumerable<byte> Iterate()
         {
-            Data = data;
-            DataLength = length;
-            Count = length;
+            for (var i = ReadyToReadStart; i < ReadyToReadStart + ReadyToReadSize; i++)
+            {
+                yield return _data[i];
+            }
         }
         
-        public TcpDataPiece(byte[] data)
+        public TcpDataPiece(int bufferSize)
         {
-            Data = data;
-            DataLength = data.Length;
-            Count = DataLength;
+            _data = new byte[bufferSize];
         }
- 
 
-        public ReadOnlyMemory<byte> GetAsMuchAsPossible(int dataToGet)
+
+        internal void Gc()
         {
-            if (Count == 0)
-                return Array.Empty<byte>();
+            if (ReadyToReadStart == 0)
+                return;
 
-            if (dataToGet > Count)
-                dataToGet = Count;
+            var spanSrc = _data.AsSpan(ReadyToReadStart, ReadyToReadSize);
+            var destSrc = _data.AsSpan(0, ReadyToReadSize);
+
+            spanSrc.CopyTo(destSrc);
+            ReadyToReadStart = 0;
+        }
+
+        public Memory<byte> AllocateBufferToWrite()
+        {
+            var writeSize = WriteSize;
             
-            try
-            {
-                return Data.AsMemory(StartIndex, dataToGet);
-            }
-            finally
-            {
-                StartIndex += dataToGet;
-                Count -= dataToGet;
-            }
+            return writeSize == 0 ? null 
+                : new Memory<byte>(_data, WriteIndex, writeSize);
         }
 
-        public bool IsEmpty => StartIndex == DataLength;
-
-        public byte[] Data { get; }
-        public int DataLength { get; }
-
-        public int StartIndex { get; private set; }
-        public int Count { get; private set; }
+        public (byte[] buffer, int start, int len) AllocateBufferToWriteLegacy()
+        {
+            var writeSize = WriteSize;
+            return writeSize == 0 
+                ? (_data, 0,0) 
+                : (_data, WriteIndex, writeSize);
+        }
         
+        public void CommitWrittenData(int size)
+        {
+            ReadyToReadSize += size;
+        }
+
+        public ReadOnlyMemory<byte> Read(int size)
+        {
+            return ReadyToReadSize < size 
+                ? new ReadOnlyMemory<byte>(_data, ReadyToReadStart, ReadyToReadSize) 
+                : new ReadOnlyMemory<byte>(_data, ReadyToReadStart, size);
+        }
+
+        public byte ReadByte()
+        {
+            return _data[ReadyToReadStart];
+        }
+
+        public int CommitReadData(int size)
+        {
+            if (size >= ReadyToReadSize)
+            {
+                var result = size - ReadyToReadSize;
+                ReadyToReadStart = 0;
+                ReadyToReadSize = 0;
+                return result;
+            }
+            
+            ReadyToReadStart += size;
+            ReadyToReadSize -= size;
+            return 0;
+        }
 
     }
 

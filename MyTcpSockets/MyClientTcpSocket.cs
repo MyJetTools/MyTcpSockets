@@ -24,15 +24,29 @@ namespace MyTcpSockets
 
         private TimeSpan _disconnectInterval;
 
-        private readonly byte[] _outBuffer;
-        public MyClientTcpSocket(Func<string> getHostPort, TimeSpan reconnectTimeOut, int sendBufferSize = 0)
+        private readonly byte[] _deliveryBuffer;
+        
+        private int _readBufferSize = 1024 * 1024 * 2;
+        private int _minReadBufferAllocationSize;
+
+        
+        public MyClientTcpSocket<TSocketData> SetReadBufferSize(int readBufferSize, int minReadBufferAllocationSize)
+        {
+            _readBufferSize = readBufferSize;
+            _minReadBufferAllocationSize = minReadBufferAllocationSize;
+            return this;
+        }
+        
+        
+        public MyClientTcpSocket(Func<string> getHostPort, TimeSpan reconnectTimeOut, int sendBufferSize = 1024*1024)
         {
             _getHostPort = getHostPort;
             _reconnectTimeOut = reconnectTimeOut;
             SetPingInterval(TimeSpan.FromSeconds(3));
-            
-            if(sendBufferSize > 0)
-                _outBuffer = SocketMemoryUtils.AllocateByteArray(sendBufferSize);
+
+            _deliveryBuffer = new byte[sendBufferSize];
+
+            _minReadBufferAllocationSize = 1024;
         }
 
         public MyClientTcpSocket<TSocketData> AddLog(Action<ITcpContext, object> log)
@@ -81,7 +95,7 @@ namespace MyTcpSockets
                 _lockObject,
                 _log,
                 null, 
-                _outBuffer);
+                _deliveryBuffer);
 
             _log?.Invoke(clientTcpContext, "Connected. Id=" + clientTcpContext.Id);
 
@@ -89,51 +103,33 @@ namespace MyTcpSockets
 
         }
 
-
-        private async Task RunDeadSocketDetectionAsync(ClientTcpContext<TSocketData> currentSocket)
+        private async Task CheckDeadSocketAsync(ClientTcpContext<TSocketData> connection)
         {
-            while (currentSocket.Connected)
-            {
-                try
-                {
-                    if (currentSocket.Connected)
-                        if (!await CheckDeadSocketAsync(currentSocket))
-                            return;
-                }
-                catch (Exception e)
-                {
-                    _log?.Invoke(currentSocket, e);
-                }
 
+            while (connection.Connected)
+            {
                 await Task.Delay(1000);
-            }
-        }
+                connection.SocketStatistic.EachSecondTimer();
+                var now = DateTime.UtcNow;
 
-        private async Task<bool> CheckDeadSocketAsync(ClientTcpContext<TSocketData> connection)
-        {
+                var receiveInterval = now - connection.SocketStatistic.LastReceiveTime;
 
-            connection.SocketStatistic.EachSecondTimer();
-            var now = DateTime.UtcNow;
+                if (receiveInterval > _disconnectInterval)
+                {
+                    var message = "Long time [" + receiveInterval +
+                                  "] no received activity. Disconnecting socket " + connection.ContextName;
+                    _log?.Invoke(connection, message);
+                    
+                    return;
+                }
 
-            var receiveInterval = now - connection.SocketStatistic.LastReceiveTime;
-
-            if (receiveInterval > _disconnectInterval)
-            {
-                var message = "Long time [" + receiveInterval +
-                              "] no received activity. Disconnecting socket " + connection.ContextName;
-                _log?.Invoke(connection, message);
-
-                await connection.DisconnectAsync();
-                return false;
-            }
-
-            if (DateTime.UtcNow - connection.SocketStatistic.LastPingSentDateTime > PingInterval)
-            {
-                connection.SocketStatistic.LastPingSentDateTime = now;
-                await connection.SendPingAsync();
+                if (DateTime.UtcNow - connection.SocketStatistic.LastPingSentDateTime > PingInterval)
+                {
+                    connection.SocketStatistic.LastPingSentDateTime = now;
+                    await connection.SendPingAsync();
+                }
             }
 
-            return true;
         }
 
         public ClientTcpContext<TSocketData> CurrentTcpContext { get; private set; }
@@ -153,8 +149,10 @@ namespace MyTcpSockets
                         CurrentTcpContext = await ConnectAsync(ipEndPoint, socketId);
                         socketId++;
 
-                        CurrentTcpContext.StartReadThread();
-                        await RunDeadSocketDetectionAsync(CurrentTcpContext);
+                        CurrentTcpContext.StartReadThread(_readBufferSize, _minReadBufferAllocationSize);
+
+                        await CheckDeadSocketAsync(CurrentTcpContext);
+                        CurrentTcpContext.Disconnect();
                     }
                     catch (Exception ex)
                     {
@@ -196,12 +194,11 @@ namespace MyTcpSockets
         {
             _working = false;
             var currentTcpContext = CurrentTcpContext;
-            currentTcpContext.DisconnectAsync().AsTask().Wait();
+            currentTcpContext.Disconnect();
             var socketLoopTask = _socketLoop;
             socketLoopTask?.Wait();
         }
 
-        public bool Connected => CurrentTcpContext != null;
 
     }
 }

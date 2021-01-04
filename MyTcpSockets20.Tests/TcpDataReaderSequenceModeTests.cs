@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using MyTcpSockets.Tests;
 using NUnit.Framework;
 
 namespace MyTcpSockets.Extensions.Tests
@@ -9,7 +10,7 @@ namespace MyTcpSockets.Extensions.Tests
         [Test]
         public void TestFindingTheSequenceFeatureAtTheSameArray()
         {
-            var trafficReader = new TcpDataReader();
+            var trafficReader = new TcpDataReader(1024, 512);
 
             var incomingArray1 = new byte[] {1, 2, 3, 4, 5, 13};
 
@@ -22,7 +23,7 @@ namespace MyTcpSockets.Extensions.Tests
         [Test]
         public void TestFindingTheSequenceFeatureByReadingToArraysAtTheEnd()
         {
-            var trafficReader = new TcpDataReader();
+            var trafficReader = new TcpDataReader(1024, 512);
 
             var incomingArray1 = new byte[] {1, 2, 3, 4, 5};
             var incomingArray2 = new byte[] {11, 12, 13, 4, 5};
@@ -42,7 +43,7 @@ namespace MyTcpSockets.Extensions.Tests
         [Test]
         public void TestFindingTheSequenceFeatureByReadingToArraysAtTheEndOtherWayAround()
         {
-            var trafficReader = new TcpDataReader();
+            var trafficReader = new TcpDataReader(1024, 512);
             var tc = new CancellationTokenSource();
             var dataTask = trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{5, 11}, tc.Token);
             

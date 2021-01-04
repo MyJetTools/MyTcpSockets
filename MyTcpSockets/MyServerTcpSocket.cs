@@ -25,11 +25,23 @@ namespace MyTcpSockets
         
         private readonly object _lockObject = new object();
 
+
+        private int _readBufferSize = 1024 * 1024 * 2;
+        private int _minReadBufferAllocationSize;
+
         public MyServerTcpSocket(IPEndPoint ipEndPoint, int sendBufferSize = 0)
         {
             _ipEndPoint = ipEndPoint;
             _sendBufferSize = sendBufferSize;
             _connections = new Connections<TSocketData>();
+            _minReadBufferAllocationSize = 1024;
+        }
+
+        public MyServerTcpSocket<TSocketData> SetReadBufferSize(int readBufferSize, int minReadBufferAllocationSize)
+        {
+            _readBufferSize = readBufferSize;
+            _minReadBufferAllocationSize = minReadBufferAllocationSize;
+            return this;
         }
 
         public MyServerTcpSocket<TSocketData> AddLog(Action<ITcpContext, object> log)
@@ -86,7 +98,7 @@ namespace MyTcpSockets
                             continue;
                         
                         _log.Invoke(connection, $"Found dead connection {connection.ContextName} with ID {connection.Id}. Disconnecting...");
-                        await connection.DisconnectAsync();
+                        connection.Disconnect();
                     }
                     catch (Exception e)
                     {
@@ -111,7 +123,7 @@ namespace MyTcpSockets
             _log?.Invoke(tcpContext,
                 $"Socket Accepted; Ip:{acceptedSocket.Client.RemoteEndPoint}. Id=" + tcpContext.Id);
 
-            tcpContext.StartReadThread();
+            tcpContext.StartReadThread(_readBufferSize, _minReadBufferAllocationSize);
         }
 
         private async Task AcceptSocketLoopAsync()
@@ -135,7 +147,7 @@ namespace MyTcpSockets
                     
                     if (!_working)
                     {
-                        connection.DisconnectAsync().AsTask().Wait();
+                        connection.Disconnect();
                         throw new Exception("Server is being stopped. Socket accept process is canceled");
                     }
 
@@ -195,7 +207,7 @@ namespace MyTcpSockets
 
             foreach (var connection in _connections.GetAllConnections())
             {
-                connection.DisconnectAsync().AsTask().Wait();
+                connection.Disconnect();
             }
 
             _theTask.Wait();

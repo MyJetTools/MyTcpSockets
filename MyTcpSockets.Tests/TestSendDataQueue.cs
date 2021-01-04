@@ -1,5 +1,4 @@
 using System;
-using MyTcpSockets.DataSender;
 
 using NUnit.Framework;
 

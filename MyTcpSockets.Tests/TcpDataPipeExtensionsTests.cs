@@ -6,7 +6,7 @@ using NUnit.Framework;
 
 namespace MyTcpSockets.Tests
 {
-    public class TcpDataPipeExtensionsTests
+    public class TcpDataReaderExtensionsTests
     {
         [SetUp]
         public void Init()
@@ -19,7 +19,7 @@ namespace MyTcpSockets.Tests
         {
             var data = new byte[] {1, 2, 3, 4, 5};
             
-            var tcpDataReader = new TcpDataReader();
+            var tcpDataReader = new TcpDataReader(10, 5);
             
             tcpDataReader.NewPackage(data);
             
@@ -29,6 +29,7 @@ namespace MyTcpSockets.Tests
             Assert.AreEqual(1, result);
         }
         
+
         [Test]
         public void TestUShort()
         {
@@ -36,7 +37,7 @@ namespace MyTcpSockets.Tests
             const ushort testValue = 30000;
             BitConverter.TryWriteBytes(data, testValue);
             
-            var tcpDataReader = new TcpDataReader();
+            var tcpDataReader = new TcpDataReader(1024,512);
             
             tcpDataReader.NewPackage(data);
 
@@ -44,7 +45,8 @@ namespace MyTcpSockets.Tests
             var result = tcpDataReader.ReadUShortAsync(token.Token).Result;
             
             Assert.AreEqual(testValue, result);
-        }   
+        }  
+
         
         [Test]
         public void TestShort()
@@ -53,7 +55,7 @@ namespace MyTcpSockets.Tests
             const short testValue = 30000;
             BitConverter.TryWriteBytes(data, testValue);
             
-            var tcpDataReader = new TcpDataReader();
+            var tcpDataReader = new TcpDataReader(1024,512);
             
             tcpDataReader.NewPackage(data);
             var token = new CancellationTokenSource();
@@ -69,7 +71,7 @@ namespace MyTcpSockets.Tests
             const uint testValue = 1234567;
             BitConverter.TryWriteBytes(data, testValue);
             
-            var tcpDataReader = new TcpDataReader();
+            var tcpDataReader = new TcpDataReader(1024,512);
             
             tcpDataReader.NewPackage(data);
             var token = new CancellationTokenSource();
@@ -85,7 +87,7 @@ namespace MyTcpSockets.Tests
             const int testValue = 1234567;
             BitConverter.TryWriteBytes(data, testValue);
             
-            var tcpDataReader = new TcpDataReader();
+            var tcpDataReader = new TcpDataReader(1024,512);
             
             tcpDataReader.NewPackage(data);
             
@@ -103,7 +105,7 @@ namespace MyTcpSockets.Tests
             const ulong testValue = 123456789012;
             BitConverter.TryWriteBytes(data, testValue);
             
-            var tcpDataReader = new TcpDataReader();
+            var tcpDataReader = new TcpDataReader(1024,512);
             
             tcpDataReader.NewPackage(data);
             var token = new CancellationTokenSource();
@@ -119,7 +121,7 @@ namespace MyTcpSockets.Tests
             const long testValue = 1234567890123;
             BitConverter.TryWriteBytes(data, testValue);
             
-            var tcpDataReader = new TcpDataReader();
+            var tcpDataReader = new TcpDataReader(1024,512);
             
             tcpDataReader.NewPackage(data);
             var token = new CancellationTokenSource();
@@ -137,7 +139,7 @@ namespace MyTcpSockets.Tests
            
            memoryStream.WritePascalString(testValue);
          
-            var tcpDataReader = new TcpDataReader();
+            var tcpDataReader = new TcpDataReader(1024,512);
             
             tcpDataReader.NewPackage(memoryStream.ToArray());
             var token = new CancellationTokenSource();
@@ -154,7 +156,7 @@ namespace MyTcpSockets.Tests
            
             memoryStream.WriteString(testValue);
          
-            var tcpDataReader = new TcpDataReader();
+            var tcpDataReader = new TcpDataReader(1024,512);
             
             tcpDataReader.NewPackage(memoryStream.ToArray());
             var token = new CancellationTokenSource();
@@ -171,14 +173,14 @@ namespace MyTcpSockets.Tests
            
             memoryStream.WriteByteArray(testValue);
          
-            var tcpDataReader = new TcpDataReader();
+            var tcpDataReader = new TcpDataReader(1024,512);
             
             tcpDataReader.NewPackage(memoryStream.ToArray());
             var token = new CancellationTokenSource();
             var result = tcpDataReader.ReadByteArrayAsync(token.Token).Result;
 
-            TestExtensions.AsReadOnlyMemory(testValue).ArraysAreEqual(result);
+            TestExtensions.AsReadOnlyMemory(testValue).ArrayIsEqualWith(result);
         } 
-        
+
     }
 }
