@@ -8,23 +8,12 @@ using MyTcpSockets.Extensions;
 namespace MyTcpSockets
 {
 
-
     public interface ITcpSerializer<T>
     {
         ReadOnlyMemory<byte> Serialize(T data);
-        
-        int BufferSize { get; }
-        
-        #if NETSTANDARD2_1
-        IAsyncEnumerable<T> DeserializeAsync(TcpDataReader reader, CancellationToken ct);
-        #else
-        ValueTask<T> DeserializeAsync(TcpDataReader reader, CancellationToken ct);
-        #endif
+        ValueTask<T> DeserializeAsync(ITcpReader reader, CancellationToken ct);
 
     }
-    
-    
-    
     
 }
 

@@ -7,7 +7,7 @@ namespace MyTcpSockets.Extensions
     {
         private readonly byte[] _data;
 
-        public int ReadyToReadStart { get; private set; }
+        public int ReadyToReadStart { get; internal set; }
         public int ReadyToReadSize { get; private set; }
 
         public int WriteIndex => ReadyToReadStart + ReadyToReadSize;
@@ -75,17 +75,11 @@ namespace MyTcpSockets.Extensions
 
         public int CommitReadData(int size)
         {
-            if (size >= ReadyToReadSize)
-            {
-                var result = size - ReadyToReadSize;
-                ReadyToReadStart = 0;
-                ReadyToReadSize = 0;
-                return result;
-            }
+            var sizeToCommit = size >= ReadyToReadSize ? ReadyToReadSize : size;
             
-            ReadyToReadStart += size;
-            ReadyToReadSize -= size;
-            return 0;
+            ReadyToReadStart += sizeToCommit;
+            ReadyToReadSize -= sizeToCommit;
+            return size - sizeToCommit;
         }
 
     }

@@ -152,6 +152,7 @@ namespace MyTcpSockets
                         CurrentTcpContext.StartReadThread(_readBufferSize, _minReadBufferAllocationSize);
 
                         await CheckDeadSocketAsync(CurrentTcpContext);
+                        Console.WriteLine("Here");
                         CurrentTcpContext.Disconnect();
                     }
                     catch (Exception ex)

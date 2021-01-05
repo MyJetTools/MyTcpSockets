@@ -7,7 +7,16 @@ using System.Threading.Tasks;
 namespace MyTcpSockets.Extensions
 {
 
-    public class TcpDataReader
+    public interface ITcpReader
+    {
+        ValueTask<byte> ReadByteAsync(CancellationToken token);
+        ValueTask<ReadOnlyMemory<byte>> ReadWhileWeGetSequenceAsync(byte[] marker, CancellationToken token);
+        void CommitReadData(byte b);
+        void CommitReadData(ReadOnlyMemory<byte> data);
+    }
+    
+
+    public class TcpDataReader : ITcpReader
     {
         public  int ReadBufferSize { get; }
         private readonly int _minAllocationSize;
@@ -63,8 +72,6 @@ namespace MyTcpSockets.Extensions
             if (_incomingPackages[0].ReadyToReadStart == 0)
                 return;
 
-            if (_incomingPackages[0].ReadyToReadSize > 64 && _incomingPackages[0].WriteSize > _minAllocationSize)
-                return;
 
             //We Wait until we finish reading
             Monitor.Enter(_readLock);
@@ -76,15 +83,15 @@ namespace MyTcpSockets.Extensions
             {
                 Monitor.Exit(_readLock);
             }
-
         }
 
         public void CommitWrittenData(int len)
         {
+         
             lock (_lockObject)
             {
-                _incomingPackages[_incomingPackages.Count-1].CommitWrittenData(len);
-
+                var lastOne = _incomingPackages[_incomingPackages.Count - 1];
+                lastOne.CommitWrittenData(len);
                 GcIfNeeded();
                 
                 if (_sizeToRead>0)
@@ -109,8 +116,10 @@ namespace MyTcpSockets.Extensions
                 return;
             
             Monitor.Enter(_readLock);
-            _taskCompletionSourceByte.SetResult(result);
+            var taskResult = _taskCompletionSourceByte;
             _taskCompletionSourceByte = null;
+            taskResult.SetResult(result);
+
         }
 
         private void TryToPushSizedRead()
@@ -122,9 +131,10 @@ namespace MyTcpSockets.Extensions
                     return;
 
                 Monitor.Enter(_readLock);
-                _taskCompletionSource.SetResult(sizedResult);
                 _sizeToRead = -1;
+                var taskResult = _taskCompletionSource;
                 _taskCompletionSource = null;
+                taskResult.SetResult(sizedResult);
             }
         }
         
@@ -135,12 +145,13 @@ namespace MyTcpSockets.Extensions
                 var size = _incomingPackages.GetSizeByMarker(_marker);
                 if (size < 0)
                     return;
+                Monitor.Enter(_readLock);
 
                 var result = _incomingPackages.TryCompilePackage(size);
-                Monitor.Enter(_readLock);
-                _taskCompletionSource.SetResult(result);
                 _marker = null;
+                var resultTask = _taskCompletionSource;
                 _taskCompletionSource = null;
+                resultTask.SetResult(result);
             }
         }
 
@@ -176,8 +187,6 @@ namespace MyTcpSockets.Extensions
             {
                 var result = _incomingPackages.TryCompilePackage(size);
 
-                Console.WriteLine(result.Length);
-
                 if (result.Length > 0)
                 {
                     Monitor.Enter(_readLock);
@@ -196,19 +205,30 @@ namespace MyTcpSockets.Extensions
             lock (_lockObject)
             {
                 var size = _incomingPackages.GetSizeByMarker(marker);
-             
+                
                 if (size < 0)
                 {
-                    _marker = marker;
                     _taskCompletionSource = new TaskCompletionSource<ReadOnlyMemory<byte>>(token);
+                    _marker = marker;
                     return new ValueTask<ReadOnlyMemory<byte>>(_taskCompletionSource.Task);
                 }
                 
                 Monitor.Enter(_readLock);
+                
                 var result = _incomingPackages.TryCompilePackage(size);
                 return new ValueTask<ReadOnlyMemory<byte>>(result);
 
             }
+        }
+
+        void ITcpReader.CommitReadData(byte b)
+        {
+            CommitReadData(1);
+        }
+
+        void ITcpReader.CommitReadData(ReadOnlyMemory<byte> data)
+        {
+            CommitReadData(data.Length);
         }
 
         public void CommitReadData(int size)
