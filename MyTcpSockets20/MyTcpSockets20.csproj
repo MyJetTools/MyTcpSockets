@@ -28,6 +28,12 @@
       <Compile Include="..\MyTcpSockets\Extensions\ITcpDataPipe.cs">
         <Link>Extensions\ITcpDataPipe.cs</Link>
       </Compile>
+      <Compile Include="..\MyTcpSockets\Extensions\PublisherSubscriber.cs">
+        <Link>Extensions\PublisherSubscriber.cs</Link>
+      </Compile>
+      <Compile Include="..\MyTcpSockets\Extensions\ReadOnlyMemoryUtils.cs">
+        <Link>Extensions\ReadOnlyMemoryUtils.cs</Link>
+      </Compile>
       <Compile Include="..\MyTcpSockets\Extensions\TcpDataPiece.cs">
         <Link>Extensions\TcpDataPiece.cs</Link>
       </Compile>

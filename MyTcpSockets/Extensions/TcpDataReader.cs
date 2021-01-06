@@ -7,16 +7,18 @@ using System.Threading.Tasks;
 namespace MyTcpSockets.Extensions
 {
 
-    public interface ITcpReader
+    public interface ITcpDataReader
     {
         ValueTask<byte> ReadByteAsync(CancellationToken token);
         ValueTask<ReadOnlyMemory<byte>> ReadWhileWeGetSequenceAsync(byte[] marker, CancellationToken token);
+        ValueTask<ReadOnlyMemory<byte>> ReadAsyncAsync(int size, CancellationToken token);
         void CommitReadData(byte b);
         void CommitReadData(ReadOnlyMemory<byte> data);
+        void CommitReadDataSize(int size);
     }
     
 
-    public class TcpDataReader : ITcpReader
+    public class TcpDataReader : ITcpDataReader
     {
         public  int ReadBufferSize { get; }
         private readonly int _minAllocationSize;
@@ -132,6 +134,7 @@ namespace MyTcpSockets.Extensions
 
                 Monitor.Enter(_readLock);
                 _sizeToRead = -1;
+
                 var taskResult = _taskCompletionSource;
                 _taskCompletionSource = null;
                 taskResult.SetResult(sizedResult);
@@ -221,17 +224,17 @@ namespace MyTcpSockets.Extensions
             }
         }
 
-        void ITcpReader.CommitReadData(byte b)
+        void ITcpDataReader.CommitReadData(byte b)
         {
-            CommitReadData(1);
+            CommitReadDataSize(1);
         }
 
-        void ITcpReader.CommitReadData(ReadOnlyMemory<byte> data)
+        void ITcpDataReader.CommitReadData(ReadOnlyMemory<byte> data)
         {
-            CommitReadData(data.Length);
+            CommitReadDataSize(data.Length);
         }
 
-        public void CommitReadData(int size)
+        public void CommitReadDataSize(int size)
         {
             lock (_lockObject)
             {

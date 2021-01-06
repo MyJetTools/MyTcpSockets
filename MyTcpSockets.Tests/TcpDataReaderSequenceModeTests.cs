@@ -50,11 +50,11 @@ namespace MyTcpSockets.Tests
             var token = new CancellationTokenSource();
             var data = await trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{5, 11}, token.Token);
             new ReadOnlyMemory<byte>(new byte[] {1, 2, 3, 4, 5, 11}).ArrayIsEqualWith(data);
-            trafficReader.CommitReadData(data.Length);
+            trafficReader.CommitReadDataSize(data.Length);
             
             data = await trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, token.Token);
             new ReadOnlyMemory<byte>(new byte[] {12, 13, 4, 5}).ArrayIsEqualWith(data);
-            trafficReader.CommitReadData(data.Length);
+            trafficReader.CommitReadDataSize(data.Length);
         }  
         
         [Test]
@@ -71,11 +71,11 @@ namespace MyTcpSockets.Tests
             var token = new CancellationTokenSource();
             var data = await trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, token.Token);
             new ReadOnlyMemory<byte>(new byte[] {1, 2, 3, 4, 5}).ArrayIsEqualWith(data);
-            trafficReader.CommitReadData(data.Length);
+            trafficReader.CommitReadDataSize(data.Length);
             
             data = await trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, token.Token);
             new ReadOnlyMemory<byte>(new byte[] {11, 12, 13, 4, 5}).ArrayIsEqualWith(data);
-            trafficReader.CommitReadData(data.Length);
+            trafficReader.CommitReadDataSize(data.Length);
         }  
         
         
@@ -92,11 +92,11 @@ namespace MyTcpSockets.Tests
             
             var data = await dataTask;
             new ReadOnlyMemory<byte>(new byte[] {1, 2, 3, 4, 5, 11}).ArrayIsEqualWith(data);
-            trafficReader.CommitReadData(data.Length);
+            trafficReader.CommitReadDataSize(data.Length);
             
             data = await trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, token.Token);
             new ReadOnlyMemory<byte>(new byte[] {12, 13, 4, 5}).ArrayIsEqualWith(data);
-            trafficReader.CommitReadData(data.Length);
+            trafficReader.CommitReadDataSize(data.Length);
         }
 
 
@@ -115,11 +115,11 @@ namespace MyTcpSockets.Tests
             
             var data = await dataTask;
             new ReadOnlyMemory<byte>(new byte[] {1, 2, 3, 4, 5, 11, 12, 13, 14, 15}).ArrayIsEqualWith(data);
-            trafficReader.CommitReadData(data.Length);
+            trafficReader.CommitReadDataSize(data.Length);
 
             data = await trafficReader.ReadWhileWeGetSequenceAsync(new byte[] {14, 15}, token.Token);
             new ReadOnlyMemory<byte>(new byte[] {21, 22, 23, 14, 15}).ArrayIsEqualWith(data);
-            trafficReader.CommitReadData(data.Length);
+            trafficReader.CommitReadDataSize(data.Length);
         }
 
     }

@@ -11,7 +11,7 @@ namespace MyTcpSockets
     public interface ITcpSerializer<T>
     {
         ReadOnlyMemory<byte> Serialize(T data);
-        ValueTask<T> DeserializeAsync(ITcpReader reader, CancellationToken ct);
+        ValueTask<T> DeserializeAsync(ITcpDataReader reader, CancellationToken ct);
 
     }
     

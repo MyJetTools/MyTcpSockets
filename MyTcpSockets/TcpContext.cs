@@ -105,7 +105,7 @@ namespace MyTcpSockets
             
             try
             {
-                _asyncLock.Dispose();
+                _deliveryPublisherSubscriber.Stop();
             }
             catch (Exception e)
             {
@@ -194,6 +194,7 @@ namespace MyTcpSockets
                 var trafficReader = new TcpDataReader(bufferSize, minAllocationSize);
 
                 var trafficWriterTask = PublishDataToTrafficReaderAsync(trafficReader);
+       
 
                 while (TcpClient.Connected)
                 {
@@ -211,51 +212,54 @@ namespace MyTcpSockets
         }
 
         protected Task ReadLoopTask { get; private set; }
+        protected Task SendTrafficTask { get; private set; }
         internal void StartReadThread(int bufferSize, int minAllocationSize)
         {
             ReadLoopTask = ReadLoopAsync(bufferSize, minAllocationSize);
+            SendTrafficTask = StartSendDeliveryTaskAsync();
         }
         #endregion
 
         
         #region Write
-        private readonly SendDataQueue _sendDataQueue;
 
         private byte[] _deliveryBuffer;
-        
-        private readonly AsyncLock _asyncLock;
 
-        private async ValueTask DeliverPacketAsync()
+        private readonly TcpSocketPublisherSubscriber _deliveryPublisherSubscriber;
+
+
+
+        private async Task StartSendDeliveryTaskAsync()
         {
-            await _asyncLock.LockAsync();
-            try
-            {
-                var dataToSend = _sendDataQueue.Dequeue(_deliveryBuffer);
-            
-                while (dataToSend.Length >0)
-                {
-                    try
-                    {
-                        var dt = DateTime.UtcNow;
-                        await SocketStream.WriteAsync(dataToSend);
-                        SocketStatistic.WeHaveSendEvent(dataToSend.Length);
-                        SocketStatistic.LastSendToSocketDuration = DateTime.UtcNow - dt;
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        _log?.Invoke(this, e);
 
-                        Disconnect();
-                        break;
-                    }
-                    dataToSend = _sendDataQueue.Dequeue(_deliveryBuffer);
-                }
-            }
-            finally
+            while (true)
             {
-                _asyncLock.Unlock();
+                var dataToSend = await _deliveryPublisherSubscriber.DequeueAsync(_deliveryBuffer);
+
+                if (dataToSend.Length == 0)
+                {
+                    Console.WriteLine("Leaving Send Delivery Task async");
+                    return;
+                }
+                
+                try
+                {
+                    var dt = DateTime.UtcNow;
+                    await SocketStream.WriteAsync(dataToSend);
+                    SocketStatistic.WeHaveSendEvent(dataToSend.Length);
+                    SocketStatistic.LastSendToSocketDuration = DateTime.UtcNow - dt;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    _log?.Invoke(this, e);
+
+                    Disconnect();
+                    break;
+                }
+
             }
+
        
         }
 
@@ -266,8 +270,7 @@ namespace MyTcpSockets
 
             var dataToSend = TcpSerializer.Serialize(data);
             
-            _sendDataQueue.Enqueue(dataToSend);
-            Task.Run(DeliverPacketAsync);
+            _deliveryPublisherSubscriber.Publish(dataToSend);
         }
         
         #endregion
@@ -306,8 +309,7 @@ namespace MyTcpSockets
 
         public TcpContext()
         {
-            _asyncLock = new AsyncLock(_lockObject);
-            _sendDataQueue = new SendDataQueue(_lockObject);
+            _deliveryPublisherSubscriber = new TcpSocketPublisherSubscriber(_lockObject);
         }
 
         internal ValueTask StartAsync(TcpClient tcpClient, ITcpSerializer<TSocketData> tcpSerializer, object lockObject, Action<ITcpContext, object> log, 
