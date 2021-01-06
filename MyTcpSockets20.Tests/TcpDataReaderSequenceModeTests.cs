@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using MyTcpSockets.Tests;
 using NUnit.Framework;
 
@@ -21,7 +22,7 @@ namespace MyTcpSockets.Extensions.Tests
         }  
         
         [Test]
-        public void TestFindingTheSequenceFeatureByReadingToArraysAtTheEnd()
+        public async Task TestFindingTheSequenceFeatureByReadingToArraysAtTheEnd()
         {
             var trafficReader = new TcpDataReader(1024, 512);
 
@@ -34,14 +35,16 @@ namespace MyTcpSockets.Extensions.Tests
             var tc = new CancellationTokenSource();
             var data = trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{5, 11}, tc.Token).Result;
             new ReadOnlyMemory<byte>(new byte[] {1, 2, 3, 4, 5, 11}).ArraysAreEqual(data);
-
-            data = trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, tc.Token).Result;
+            trafficReader.CommitReadDataSize(data.Length);
+            
+            data = await trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, tc.Token);
             new ReadOnlyMemory<byte>(new byte[] {12, 13, 4, 5}).ArraysAreEqual(data);
+            trafficReader.CommitReadDataSize(data.Length);
         }  
         
         
         [Test]
-        public void TestFindingTheSequenceFeatureByReadingToArraysAtTheEndOtherWayAround()
+        public async Task TestFindingTheSequenceFeatureByReadingToArraysAtTheEndOtherWayAround()
         {
             var trafficReader = new TcpDataReader(1024, 512);
             var tc = new CancellationTokenSource();
@@ -53,11 +56,13 @@ namespace MyTcpSockets.Extensions.Tests
             trafficReader.NewPackage(incomingArray1);
             trafficReader.NewPackage(incomingArray2);
             
-            var data = dataTask.Result;
+            var data = await dataTask;
             new ReadOnlyMemory<byte>(new byte[] {1, 2, 3, 4, 5, 11}).ArraysAreEqual(data);
+            trafficReader.CommitReadDataSize(data.Length);
             
-            data = trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, tc.Token).Result;
+            data = await trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, tc.Token);
             new ReadOnlyMemory<byte>(new byte[] {12, 13, 4, 5}).ArraysAreEqual(data);
+            trafficReader.CommitReadDataSize(data.Length);
         } 
     }
 }

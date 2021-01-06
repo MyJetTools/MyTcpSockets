@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using MyTcpSockets.Extensions;
 using MyTcpSockets.Extensions.Tests;
 using NUnit.Framework;
@@ -9,7 +10,7 @@ namespace MyTcpSockets.Tests
     public class TcpDataReaderSizeTests
     {
         [Test]
-        public void TestBasicFeature()
+        public async Task TestBasicFeature()
         {
             var trafficReader = new TcpDataReader(1024, 512);
 
@@ -18,17 +19,19 @@ namespace MyTcpSockets.Tests
             trafficReader.NewPackage(incomingArray);
 
             var tc = new CancellationTokenSource();
-            var data = trafficReader.ReadAsyncAsync(3, tc.Token).Result;
+            var data = await trafficReader.ReadAsyncAsync(3, tc.Token);
 
-            TestExtensions.ArraysAreEqual(TestExtensions.AsReadOnlyMemory(incomingArray, 0, 3), data);
+            TestExtensions.AsReadOnlyMemory(incomingArray, 0, 3).ArraysAreEqual(data);
+            trafficReader.CommitReadDataSize(data.Length);
    
-            data = trafficReader.ReadAsyncAsync(2, tc.Token).Result;
-            TestExtensions.ArraysAreEqual(TestExtensions.AsReadOnlyMemory(incomingArray, 3, 2), data);
+            data = await trafficReader.ReadAsyncAsync(2, tc.Token);
+            TestExtensions.AsReadOnlyMemory(incomingArray, 3, 2).ArraysAreEqual(data);
+            trafficReader.CommitReadDataSize(data.Length);
             
         }
 
         [Test]
-        public void TestOverflowFeature()
+        public async Task TestOverflowFeature()
         {
             var trafficReader = new TcpDataReader(1024, 512);
 
@@ -39,17 +42,19 @@ namespace MyTcpSockets.Tests
             trafficReader.NewPackage(incomingArray2);
 
             var tc = new CancellationTokenSource();
-            var data = trafficReader.ReadAsyncAsync(3, tc.Token).Result;
+            var data = await trafficReader.ReadAsyncAsync(3, tc.Token);
 
-            TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}), data);
+            new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}).ArraysAreEqual(data);
+            trafficReader.CommitReadDataSize(data.Length);
 
-            data = trafficReader.ReadAsyncAsync(4, tc.Token).Result;
-            TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11}), data);
+            data = await trafficReader.ReadAsyncAsync(4, tc.Token);
+            new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11}).ArraysAreEqual(data);
+            trafficReader.CommitReadDataSize(data.Length);
 
         }
 
         [Test]
-        public void TestDoubleOverflowFeature()
+        public async Task TestDoubleOverflowFeature()
         {
             var trafficReader = new TcpDataReader(1024, 512);
 
@@ -62,17 +67,19 @@ namespace MyTcpSockets.Tests
             trafficReader.NewPackage(incomingArray3);
 
             var tc = new CancellationTokenSource();
-            var data = trafficReader.ReadAsyncAsync(3, tc.Token).Result;
+            var data = await trafficReader.ReadAsyncAsync(3, tc.Token);
 
             new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}).ArraysAreEqual(data);
+            trafficReader.CommitReadDataSize(data.Length);
 
-            data = trafficReader.ReadAsyncAsync(6, tc.Token).Result;
+            data = await trafficReader.ReadAsyncAsync(6, tc.Token);
             new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11, 22, 111}).ArraysAreEqual(data);
+            trafficReader.CommitReadDataSize(data.Length);
 
         }
 
         [Test]
-        public void TestDoubleVeryOverflowFeature()
+        public async Task TestDoubleVeryOverflowFeature()
         {
             var trafficReader = new TcpDataReader(1024, 512);
 
@@ -86,13 +93,13 @@ namespace MyTcpSockets.Tests
             
             
             var tc = new CancellationTokenSource();
-            var data = trafficReader.ReadAsyncAsync(3, tc.Token).Result;
+            var data = await trafficReader.ReadAsyncAsync(3, tc.Token);
+            new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}).ArraysAreEqual(data);
+            trafficReader.CommitReadDataSize(data.Length);
 
-            TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}), data);
-
-            data = trafficReader.ReadAsyncAsync(10, tc.Token).Result;
-            TestExtensions.ArraysAreEqual(new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11, 22, 33, 44, 55, 66, 111}), data);
-
+            data = await trafficReader.ReadAsyncAsync(10, tc.Token);
+            new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11, 22, 33, 44, 55, 66, 111}).ArraysAreEqual(data);
+            trafficReader.CommitReadDataSize(data.Length);
         }
     }
 }
