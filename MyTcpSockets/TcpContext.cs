@@ -134,7 +134,6 @@ namespace MyTcpSockets
         private async Task PublishDataToTrafficReaderAsync(TcpDataReader trafficReader)
         {
 
-
             try
             {
 #if NETSTANDARD2_1
@@ -194,15 +193,20 @@ namespace MyTcpSockets
                 var trafficReader = new TcpDataReader(bufferSize, minAllocationSize);
 
                 var trafficWriterTask = PublishDataToTrafficReaderAsync(trafficReader);
-       
+
 
                 while (TcpClient.Connected)
                 {
-                    var incomingDataPacket = await TcpSerializer.DeserializeAsync(trafficReader, _cancellationToken.Token);
+                    var incomingDataPacket =
+                        await TcpSerializer.DeserializeAsync(trafficReader, _cancellationToken.Token);
                     await HandleIncomingDataAsync(incomingDataPacket);
                 }
 
                 await trafficWriterTask;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
             }
             finally
             {
@@ -225,7 +229,7 @@ namespace MyTcpSockets
 
         private byte[] _deliveryBuffer;
 
-        private readonly TcpSocketPublisherSubscriber _deliveryPublisherSubscriber;
+        private TcpSocketPublisherSubscriber _deliveryPublisherSubscriber;
 
 
 
@@ -307,16 +311,14 @@ namespace MyTcpSockets
         }
 
 
-        public TcpContext()
-        {
-            _deliveryPublisherSubscriber = new TcpSocketPublisherSubscriber(_lockObject);
-        }
 
         internal ValueTask StartAsync(TcpClient tcpClient, ITcpSerializer<TSocketData> tcpSerializer, object lockObject, Action<ITcpContext, object> log, 
             Action<ITcpContext> disconnectedCallback, byte[] deliveryBuffer)
         {
             _disconnectedCallback = disconnectedCallback;
             _lockObject = lockObject;
+            _deliveryBuffer = deliveryBuffer;
+            _deliveryPublisherSubscriber = new TcpSocketPublisherSubscriber(_lockObject);
             TcpClient = tcpClient;
             SocketStream = TcpClient.GetStream();
             TcpSerializer = tcpSerializer;
@@ -324,10 +326,6 @@ namespace MyTcpSockets
             _log = log;
             Connected = true;
             SocketStatistic = new SocketStatistic();
-
-            _deliveryBuffer = deliveryBuffer;
-
-            
             return OnConnectAsync();
         }
     }

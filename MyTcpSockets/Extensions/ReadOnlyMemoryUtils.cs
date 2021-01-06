@@ -15,8 +15,9 @@ namespace MyTcpSockets.Extensions
             var pos = 0;
             var remainsToCopy = finalDestination.Length;
             
-            while (remainsToCopy>0)
+            while (remainsToCopy>0 && src.Count>0)
             {
+                
                 var sizeToCopy = src.First.Value.Length > remainsToCopy? remainsToCopy : src.First.Value.Length;
 
                 var source = src.First.Value.Span.Slice(0, sizeToCopy);
@@ -25,7 +26,9 @@ namespace MyTcpSockets.Extensions
                 source.CopyTo(dest);
 
                 if (sizeToCopy == src.First.Value.Length)
+                {
                     src.RemoveFirst();
+                }
                 else
                     src.First.Value = src.First.Value.Slice(sizeToCopy, src.First.Value.Length - sizeToCopy);
 

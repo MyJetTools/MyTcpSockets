@@ -29,8 +29,11 @@ namespace MyTcpSockets
         private int _readBufferSize = 1024 * 1024 * 2;
         private int _minReadBufferAllocationSize;
 
-        public MyServerTcpSocket(IPEndPoint ipEndPoint, int sendBufferSize = 0)
+        public MyServerTcpSocket(IPEndPoint ipEndPoint, int sendBufferSize = 2048*2048)
         {
+            if (sendBufferSize < 1024)
+                throw new Exception("Buffer size must be more then 1024. Now size:" + sendBufferSize);
+            
             _ipEndPoint = ipEndPoint;
             _sendBufferSize = sendBufferSize;
             _connections = new Connections<TSocketData>();
@@ -115,7 +118,7 @@ namespace MyTcpSockets
         private async Task KickOffNewSocketAsync(TcpContext<TSocketData> tcpContext, TcpClient acceptedSocket)
         {
 
-            var bufferToSend = _sendBufferSize > 0 ? SocketMemoryUtils.AllocateByteArray(_sendBufferSize) : null;
+            var bufferToSend = SocketMemoryUtils.AllocateByteArray(_sendBufferSize);
 
             await tcpContext.StartAsync(acceptedSocket, _getSerializer(), _lockObject, _log,
                 socket => { _connections.RemoveSocket(socket.Id); }, bufferToSend);
