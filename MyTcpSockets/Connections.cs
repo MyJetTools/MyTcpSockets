@@ -10,6 +10,8 @@ namespace MyTcpSockets
         {
             private readonly Dictionary<long, TcpContext<T>> _sockets = new Dictionary<long, TcpContext<T>>();
 
+            private IReadOnlyList<TcpContext<T>> _socketsAsList = Array.Empty<TcpContext<T>>();
+
             private readonly ReaderWriterLockSlim _lockSlim = new ReaderWriterLockSlim();
 
             public void RemoveSocket(long connectionId)
@@ -19,6 +21,8 @@ namespace MyTcpSockets
                 {
                     if (_sockets.ContainsKey(connectionId))
                         _sockets.Remove(connectionId);
+
+                    _socketsAsList = _sockets.Values.ToList();
                 }
                 finally
                 {
@@ -33,6 +37,7 @@ namespace MyTcpSockets
                 try
                 {
                     _sockets.Add(connection.Id, connection);
+                    _socketsAsList = _sockets.Values.ToList();
                 }
                 finally
                 {
@@ -46,7 +51,7 @@ namespace MyTcpSockets
                 _lockSlim.EnterReadLock();
                 try
                 {
-                    return _sockets.Values.ToList();
+                    return _socketsAsList;
                 }
                 finally
                 {
@@ -54,12 +59,12 @@ namespace MyTcpSockets
                 }
             }
 
-            public IReadOnlyList<TcpContext<T>> GetConnections(Func<TcpContext<T>, bool> condition)
+            public IEnumerable<TcpContext<T>> GetConnections(Func<TcpContext<T>, bool> condition)
             {
                 _lockSlim.EnterReadLock();
                 try
                 {
-                    return _sockets.Values.Where(condition).ToList();
+                    return _socketsAsList.Where(condition);
                 }
                 finally
                 {

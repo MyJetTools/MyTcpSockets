@@ -141,6 +141,7 @@ namespace MyTcpSockets
 
                 var readSize =
                     await SocketStream.ReadAsync(buffer, _cancellationToken.Token);
+                
 
                 while (readSize > 0)
                 {

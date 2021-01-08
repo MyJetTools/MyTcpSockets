@@ -20,32 +20,36 @@ namespace MyTcpSockets.Extensions
         {
             if (_stopped)
                 return;
+
+
+            TaskCompletionSource<ReadOnlyMemory<byte>> awaitingTask;
+            ReadOnlyMemory<byte> bytesToYield;
             
             lock (_lockObject)
             {
                 _queue.AddLast(itm);
 
-                if (_awaitingTask != null)
-                    ProcessAwaitingTask();
+                if (_awaitingTask == null)
+                    return;
+                
+                bytesToYield = _queue.CompileAndCopyAndDispose(_buffer);
+                awaitingTask = _awaitingTask;
+                _awaitingTask = null;
             }
+
+            awaitingTask?.SetResult(bytesToYield);
         }
 
         private bool _stopped;
 
-        private void ProcessAwaitingTask()
-        {
-            var result = _queue.ReadAndCopyTo(_buffer);
-            var task = _awaitingTask;
-            _awaitingTask = null;
-            task.SetResult(result);
-        }
+
 
 
         public ValueTask<ReadOnlyMemory<byte>> DequeueAsync(byte[] deliveryBuffer)
         {
             lock (_lockObject)
             {
-                var result = _queue.ReadAndCopyTo(deliveryBuffer);
+                var result = _queue.CompileAndCopyAndDispose(deliveryBuffer);
                 if (result.Length > 0)
                     return new ValueTask<ReadOnlyMemory<byte>>(result);
 

@@ -165,15 +165,16 @@ namespace MyTcpSockets
 
         }
 
-        public IReadOnlyList<TcpContext<TSocketData>> GetConnections(
-            Func<TcpContext<TSocketData>, bool> filterCondition = null)
+        public IReadOnlyList<TcpContext<TSocketData>> GetConnections()
         {
-
-            return filterCondition == null
-                ? _connections.GetAllConnections()
-                : _connections.GetConnections(filterCondition);
+            return _connections.GetAllConnections();
         }
 
+        public IEnumerable<TcpContext<TSocketData>> GetConnections(
+            Func<TcpContext<TSocketData>, bool> filterCondition)
+        {
+            return _connections.GetConnections(filterCondition);
+        }
 
         private Task _theTask;
         private bool _working; 

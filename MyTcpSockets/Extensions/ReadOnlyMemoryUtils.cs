@@ -7,7 +7,7 @@ namespace MyTcpSockets.Extensions
     {
 
 
-        public static ReadOnlyMemory<byte> ReadAndCopyTo(this LinkedList<ReadOnlyMemory<byte>> src, byte[] finalDestination)
+        public static ReadOnlyMemory<byte> CompileAndCopyAndDispose(this LinkedList<ReadOnlyMemory<byte>> src, byte[] finalDestination)
         {
             if (src.Count == 0)
                 return Array.Empty<byte>();

@@ -18,7 +18,7 @@ namespace MyTcpSockets.Tests
 
             var buffer = new byte[3];
 
-            var result = list.ReadAndCopyTo(buffer);
+            var result = list.CompileAndCopyAndDispose(buffer);
             
             result.ToArray().ArraysAreEqual(new byte[]{1,2,3});
             
@@ -37,7 +37,7 @@ namespace MyTcpSockets.Tests
 
             var buffer = new byte[6];
 
-            var result = list.ReadAndCopyTo(buffer);
+            var result = list.CompileAndCopyAndDispose(buffer);
 
             result.ToArray().ArraysAreEqual(new byte[] {1, 2, 3, 4, 5, 6});
 
@@ -56,7 +56,7 @@ namespace MyTcpSockets.Tests
 
             var buffer = new byte[10];
 
-            var result = list.ReadAndCopyTo(buffer);
+            var result = list.CompileAndCopyAndDispose(buffer);
 
             result.ToArray().ArraysAreEqual(new byte[] {1, 2, 3, 4, 5, 6, 7,8,9,10});
             
