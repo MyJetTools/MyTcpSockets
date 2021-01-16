@@ -19,9 +19,6 @@
 
 
     <ItemGroup>
-      <Compile Include="..\MyTcpSockets\AsyncLock.cs">
-        <Link>AsyncLock.cs</Link>
-      </Compile>
       <Compile Include="..\MyTcpSockets\Connections.cs">
         <Link>Connections.cs</Link>
       </Compile>
