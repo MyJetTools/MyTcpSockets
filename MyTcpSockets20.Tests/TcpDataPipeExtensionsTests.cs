@@ -19,7 +19,7 @@ namespace MyTcpSockets.Tests
             tcpDataReader.NewPackage(data);
 
             var tc = new CancellationTokenSource();
-            var result = tcpDataReader.ReadByteAsync(tc.Token).Result;
+            var result = tcpDataReader.ReadAndCommitByteAsync(tc.Token).Result;
             
             Assert.AreEqual(1, result);
         }

@@ -58,8 +58,7 @@ namespace MyTcpSockets.Extensions
 
         public static async ValueTask<string> ReadPascalStringAsync(this ITcpDataReader reader, CancellationToken ct, Encoding encoding = null)
         {
-            var strLen = await reader.ReadByteAsync(ct);
-            reader.CommitReadDataSize(1);
+            var strLen = await reader.ReadAndCommitByteAsync(ct);
             var data = await reader.ReadAsyncAsync(strLen, ct);
             
             if (encoding == null)
