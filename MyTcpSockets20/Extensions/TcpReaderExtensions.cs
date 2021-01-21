@@ -83,7 +83,7 @@ namespace MyTcpSockets.Extensions
             return result;
         }
         
-        public static async ValueTask<ReadOnlyMemory<byte>> ReadByteArrayAsync(this ITcpDataReader reader, CancellationToken ct)
+        public static async ValueTask<byte[]> ReadByteArrayAsync(this ITcpDataReader reader, CancellationToken ct)
         {
             var strLen = await reader.ReadIntAsync(ct);
             var data = await reader.ReadAsyncAsync(strLen, ct);
