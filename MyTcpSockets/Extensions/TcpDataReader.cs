@@ -24,69 +24,96 @@ namespace MyTcpSockets.Extensions
 
     public class TcpDataReader : ITcpDataReader
     {
-        public  int ReadBufferSize { get; }
+        public class AwaitingBuffer
+        {
+            public int SizeToRead { get; private set; }
+            
+            public byte[] CompilingBuffer { get; private set; }
+            
+            public TaskCompletionSource<Memory<byte>> WaitingForBufferBeingReadTask { get; private set; }
+
+
+            public void Set(int sizeToRead, bool createCompilingBuffer)
+            {
+                SizeToRead = sizeToRead;
+                CompilingBuffer = createCompilingBuffer ? new byte[sizeToRead] : null;
+                WaitingForBufferBeingReadTask = new TaskCompletionSource<Memory<byte>>();
+            }
+
+            public void Reset()
+            {
+                SizeToRead = 0;
+                CompilingBuffer = null;
+                WaitingForBufferBeingReadTask = null;
+            }
+        }
         
-        private readonly List<TcpDataPiece> _incomingPackages = new List<TcpDataPiece>();
+        
+        private readonly TcpDataPiece _readBuffer;
 
         private readonly object _lockObject = new object();
         private readonly object _readLock = new object();
 
         public TcpDataReader(int readBufferSize)
         {
-            ReadBufferSize = readBufferSize;
-            _incomingPackages.Add(new TcpDataPiece(readBufferSize));
+            _readBuffer =  new TcpDataPiece(readBufferSize);
         }
 
         #region write
 
+        private AwaitingBuffer _awaitingBuffer = new AwaitingBuffer();
+
         private int _allocatedBufferSize;
-        public Memory<byte> AllocateBufferToWrite()
+        
+        public ValueTask<Memory<byte>> AllocateBufferToWriteAsync()
         {
             lock (_lockObject)
             {
 
-                var result = _incomingPackages[_incomingPackages.Count - 1].AllocateBufferToWrite();
-                
+                var result = _readBuffer.AllocateBufferToWrite();
 
-                if (result.Length > 0)
+                if (result.Length == 0)
                 {
-                    _allocatedBufferSize = result.Length;
-                    return result;
+                    _waitingForBufferBeingReadTask = new TaskCompletionSource<Memory<byte>>();
+                    return new ValueTask<Memory<byte>>(_waitingForBufferBeingReadTask.Task);
                 }
-
-                _incomingPackages.Add(new TcpDataPiece(ReadBufferSize));
-                result =  _incomingPackages[_incomingPackages.Count - 1].AllocateBufferToWrite();
+  
                 _allocatedBufferSize = result.Length;
-                return result;
+                return new ValueTask<Memory<byte>>(result);
             }
         }
-        
-        public (byte[] buffer, int start, int len) AllocateBufferToWriteLegacy()
+
+
+        private TaskCompletionSource<(byte[] buffer, int start, int len)> _waitingForBufferBeingReadLegacyTask;
+        public ValueTask<(byte[] buffer, int start, int len)> AllocateBufferToWriteLegacyAsync()
         {
             lock (_lockObject)
             {
-                var result = _incomingPackages[_incomingPackages.Count-1].AllocateBufferToWriteLegacy();
-                
-                if (result.len > 0)
-                    return result;
+                var result = _readBuffer.AllocateBufferToWriteLegacy();
 
-                _incomingPackages.Add(new TcpDataPiece(ReadBufferSize));
+                if (result.len == 0)
+                {
+                    _waitingForBufferBeingReadLegacyTask =
+                        new TaskCompletionSource<(byte[] buffer, int start, int len)>();
 
-                return _incomingPackages[_incomingPackages.Count-1].AllocateBufferToWriteLegacy(); 
+                    return new ValueTask<(byte[] buffer, int start, int len)>();
+                }
+
+                _allocatedBufferSize = result.len;
+                return new ValueTask<(byte[] buffer, int start, int len)>(result);
             }
         }
 
         private void GcIfNeeded()
         {
-            if (_incomingPackages[0].ReadyToReadStart == 0)
+            if (_readBuffer.ReadyToReadStart == 0)
                 return;
-
 
             //We Wait until we finish reading
             Monitor.Enter(_readLock);
             try
             {
-                _incomingPackages[0].Gc();
+                _readBuffer.Gc();
             }
             finally
             {
@@ -103,8 +130,7 @@ namespace MyTcpSockets.Extensions
          
             lock (_lockObject)
             {
-                var lastOne = _incomingPackages[_incomingPackages.Count - 1];
-                lastOne.CommitWrittenData(len);
+                _readBuffer.CommitWrittenData(len);
                 GcIfNeeded();
                 
                 if (_sizeToRead>0)
@@ -114,54 +140,71 @@ namespace MyTcpSockets.Extensions
                     TryToPushMarkerRead();
 
                 if (_taskCompletionSourceByte != null)
-                    TryToPushByte();
+                    TryToCommitByte();
             }
 
         }
         #endregion
 
 
-        
-        private void TryToPushByte()
+
+        private void CheckIfWriteBufferHasToBePushed()
         {
-            var (hasResult, result) = _incomingPackages.TryReadByte();
-            if (!hasResult) 
-                return;
             
-            //  Monitor.Enter(_readLock);
+        }
+        
+        
+        
+        private void TryToCommitByte()
+        {
+            if (_readBuffer.ReadyToReadSize == 0)
+                return;
             var taskResult = _taskCompletionSourceByte;
             _taskCompletionSourceByte = null;
-            CommitByte();
+            var result = CommitByte();
+            taskResult.SetResult(result);
+        }
+
+
+        private void CompleteReadingBufferTask(ReadOnlyMemory<byte> result)
+        {
+            Monitor.Enter(_readLock);
+            _sizeToRead = -1;
+
+            var taskResult = _taskCompletionSource;
+            _taskCompletionSource = null;
             taskResult.SetResult(result);
         }
 
         private void TryToPushSizedRead()
         {
-            if (_taskCompletionSource != null)
+            if (_taskCompletionSource == null)
+                return;
+
+            if (_sizeToRead < _readBuffer.BufferSize)
             {
-                var sizedResult = _incomingPackages.TryCompilePackage(_sizeToRead);
-                if (sizedResult.Length == 0)
+                if (_readBuffer.ReadyToReadSize < _sizeToRead)
                     return;
-
-                Monitor.Enter(_readLock);
-                _sizeToRead = -1;
-
-                var taskResult = _taskCompletionSource;
-                _taskCompletionSource = null;
-                taskResult.SetResult(sizedResult);
+                
+                var result = _readBuffer.Read(_sizeToRead);
+                CompleteReadingBufferTask(result);
+                return;
             }
+
+            
+
         }
-        
+
         private void TryToPushMarkerRead()
         {
             if (_taskCompletionSource != null)
             {
-                var size = _incomingPackages.GetSizeByMarker(_marker);
+                var size = _readBuffer.GetSizeByMarker(_marker);
                 if (size < 0)
                     return;
                 Monitor.Enter(_readLock);
 
-                var result = _incomingPackages.TryCompilePackage(size);
+                var result = _readBuffer.TryCompilePackage(size);
                 _marker = null;
                 var resultTask = _taskCompletionSource;
                 _taskCompletionSource = null;
@@ -171,6 +214,7 @@ namespace MyTcpSockets.Extensions
 
 
         private int _sizeToRead = -1;
+        private byte[] _bufferToCompile;
 
         private byte[] _marker;
         private TaskCompletionSource<ReadOnlyMemory<byte>> _taskCompletionSource;
@@ -181,35 +225,41 @@ namespace MyTcpSockets.Extensions
         {
             lock (_lockObject)
             {
-                var (hasResult, result) = _incomingPackages.TryReadByte();
 
-                if (hasResult)
+                if (_readBuffer.ReadyToReadSize > 0)
                 {
-                    CommitByte();
-                    //Monitor.Enter(_readLock);
-                    return new ValueTask<byte>(result);
+                    var result = CommitByte();
+                    return new ValueTask<byte>(result); 
                 }
-
                 
                 _taskCompletionSourceByte = new TaskCompletionSource<byte>(token);
                 return new ValueTask<byte>(_taskCompletionSourceByte.Task);
             }
         }
 
+        private ReadOnlyMemory<byte> ReadAndLockIfWeHaveData(int neededSize)
+        {
+            var result = _readBuffer.TryRead(neededSize);
+            if (result.Length > 0)
+                Monitor.Enter(_readLock);
+            return result;
+            
+        }
+
         public ValueTask<ReadOnlyMemory<byte>> ReadAsyncAsync(int size, CancellationToken token)
         {
             lock (_lockObject)
             {
-                var result = _incomingPackages.TryCompilePackage(size);
+
+                var result = ReadAndLockIfWeHaveData(size);
 
                 if (result.Length > 0)
-                {
-                    Monitor.Enter(_readLock);
                     return new ValueTask<ReadOnlyMemory<byte>>(result);
-                }
-                    
                 
                 _sizeToRead = size;
+                if (_sizeToRead > _allocatedBufferSize)
+                    _bufferToCompile = new byte[_sizeToRead];
+                
                 _taskCompletionSource = new TaskCompletionSource<ReadOnlyMemory<byte>>(token);
                 return new ValueTask<ReadOnlyMemory<byte>>(_taskCompletionSource.Task);
             }
@@ -219,7 +269,7 @@ namespace MyTcpSockets.Extensions
         {
             lock (_lockObject)
             {
-                var size = _incomingPackages.GetSizeByMarker(marker);
+                var size = _readBuffer.GetSizeByMarker(marker);
                 
                 if (size < 0)
                 {
@@ -230,7 +280,7 @@ namespace MyTcpSockets.Extensions
                 
                 Monitor.Enter(_readLock);
                 
-                var result = _incomingPackages.TryCompilePackage(size);
+                var result = _readBuffer.TryCompilePackage(size);
                 return new ValueTask<ReadOnlyMemory<byte>>(result);
 
             }
@@ -242,15 +292,11 @@ namespace MyTcpSockets.Extensions
             CommitReadDataSize(data.Length);
         }
 
-        private void CommitByte()
+        private byte CommitByte()
         {
-            _incomingPackages[0].CommitReadData(1);
-
-            if (_incomingPackages.Count > 1)
-            {
-                if (_incomingPackages[0].ReadyToReadSize == 0)
-                    _incomingPackages.RemoveAt(0);
-            }
+            var result = _readBuffer.ReadByte();
+            _readBuffer.CommitReadData(1);
+            return result;
         }
 
         public void CommitReadDataSize(int size)
@@ -259,12 +305,12 @@ namespace MyTcpSockets.Extensions
             {
                 while (size>0)
                 {
-                    size = _incomingPackages[0].CommitReadData(size);
+                    size = _readBuffer.CommitReadData(size);
 
-                    if (_incomingPackages.Count > 1)
+                    if (_readBuffer.Count > 1)
                     {
-                        if (_incomingPackages[0].ReadyToReadSize == 0)
-                            _incomingPackages.RemoveAt(0);
+                        if (_readBuffer.ReadyToReadSize == 0)
+                            _readBuffer.RemoveAt(0);
                     }
                 } 
                 Monitor.Exit(_readLock);
@@ -285,14 +331,10 @@ namespace MyTcpSockets.Extensions
         public override string ToString()
         {
             var result = new StringBuilder();
-            result.Append("Start:" + _incomingPackages[0].ReadyToReadStart);
-            result.Append("Len:" + _incomingPackages[0].ReadyToReadSize);
+            result.Append("Start:" + _readBuffer.ReadyToReadStart);
+            result.Append("Len:" + _readBuffer.ReadyToReadSize);
             result.Append('[');
-            foreach (var b in _incomingPackages.GetAll())
-            {
-                result.Append(b+",");
-            }
-
+            result.Append(_readBuffer);
             return result + "]";
         }
 

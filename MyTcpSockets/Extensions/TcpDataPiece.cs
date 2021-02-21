@@ -8,7 +8,7 @@ namespace MyTcpSockets.Extensions
     {
         private readonly byte[] _data;
 
-        public int ReadyToReadStart { get; internal set; }
+        public int ReadyToReadStart { get; private set; }
         public int ReadyToReadSize { get; private set; }
 
         public int WriteIndex => ReadyToReadStart + ReadyToReadSize;
@@ -27,6 +27,8 @@ namespace MyTcpSockets.Extensions
         {
             _data = new byte[bufferSize];
         }
+
+        public int BufferSize => _data.Length;
 
 
         internal void Gc()
@@ -62,10 +64,10 @@ namespace MyTcpSockets.Extensions
             ReadyToReadSize += size;
         }
 
-        public ReadOnlyMemory<byte> Read(int size)
+        public ReadOnlyMemory<byte> TryRead(int size)
         {
             return ReadyToReadSize < size 
-                ? new ReadOnlyMemory<byte>(_data, ReadyToReadStart, ReadyToReadSize) 
+                ? new ReadOnlyMemory<byte>() 
                 : new ReadOnlyMemory<byte>(_data, ReadyToReadStart, size);
         }
 
