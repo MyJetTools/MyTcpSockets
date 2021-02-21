@@ -16,17 +16,17 @@ namespace MyTcpSockets.Tests
 
             var incomingArray = new byte[] {1, 2, 3, 4, 5, 6};
 
-            trafficReader.NewPackage(incomingArray);
+            await trafficReader.NewPackageAsync(incomingArray);
 
             var tc = new CancellationTokenSource();
             var data = await trafficReader.ReadAsyncAsync(3, tc.Token);
 
-            TestExtensions.AsReadOnlyMemory(incomingArray, 0, 3).ArraysAreEqual(data);
-            trafficReader.CommitReadDataSize(data.Length);
+            TestExtensions.AsReadOnlyMemory(incomingArray, 0, 3).ArraysAreEqual(data.AsArray());
+            trafficReader.CommitReadData(data);
    
             data = await trafficReader.ReadAsyncAsync(2, tc.Token);
-            TestExtensions.AsReadOnlyMemory(incomingArray, 3, 2).ArraysAreEqual(data);
-            trafficReader.CommitReadDataSize(data.Length);
+            TestExtensions.AsReadOnlyMemory(incomingArray, 3, 2).ArraysAreEqual(data.AsArray());
+            trafficReader.CommitReadData(data);
             
         }
 
@@ -38,18 +38,18 @@ namespace MyTcpSockets.Tests
             var incomingArray1 = new byte[] {1, 2, 3, 4, 5, 6};
             var incomingArray2 = new byte[] {11, 22, 33, 44, 55, 66};
 
-            trafficReader.NewPackage(incomingArray1);
-            trafficReader.NewPackage(incomingArray2);
+            await trafficReader.NewPackageAsync(incomingArray1);
+            await trafficReader.NewPackageAsync(incomingArray2);
 
             var tc = new CancellationTokenSource();
             var data = await trafficReader.ReadAsyncAsync(3, tc.Token);
 
-            new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}).ArraysAreEqual(data);
-            trafficReader.CommitReadDataSize(data.Length);
+            new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}).ArraysAreEqual(data.AsArray());
+            trafficReader.CommitReadData(data);
 
             data = await trafficReader.ReadAsyncAsync(4, tc.Token);
-            new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11}).ArraysAreEqual(data);
-            trafficReader.CommitReadDataSize(data.Length);
+            new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11}).ArraysAreEqual(data.AsArray());
+            trafficReader.CommitReadData(data);
 
         }
 
@@ -62,19 +62,19 @@ namespace MyTcpSockets.Tests
             var incomingArray2 = new byte[] {11, 22,};
             var incomingArray3 = new byte[] {111, 222, 233, 244, 254, 255};
 
-            trafficReader.NewPackage(incomingArray1);
-            trafficReader.NewPackage(incomingArray2);
-            trafficReader.NewPackage(incomingArray3);
+            await trafficReader.NewPackageAsync(incomingArray1);
+            await trafficReader.NewPackageAsync(incomingArray2);
+            await trafficReader.NewPackageAsync(incomingArray3);
 
             var tc = new CancellationTokenSource();
             var data = await trafficReader.ReadAsyncAsync(3, tc.Token);
 
-            new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}).ArraysAreEqual(data);
-            trafficReader.CommitReadDataSize(data.Length);
+            new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}).ArraysAreEqual(data.AsArray());
+            trafficReader.CommitReadData(data);
 
             data = await trafficReader.ReadAsyncAsync(6, tc.Token);
-            new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11, 22, 111}).ArraysAreEqual(data);
-            trafficReader.CommitReadDataSize(data.Length);
+            new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11, 22, 111}).ArraysAreEqual(data.AsArray());
+            trafficReader.CommitReadData(data);
 
         }
 
@@ -87,19 +87,19 @@ namespace MyTcpSockets.Tests
             var incomingArray2 = new byte[] {11, 22, 33, 44, 55, 66,};
             var incomingArray3 = new byte[] {111, 222, 233, 244, 254, 255};
 
-            trafficReader.NewPackage(incomingArray1);
-            trafficReader.NewPackage(incomingArray2);
-            trafficReader.NewPackage(incomingArray3);
+            await trafficReader.NewPackageAsync(incomingArray1);
+            await trafficReader.NewPackageAsync(incomingArray2);
+            await trafficReader.NewPackageAsync(incomingArray3);
             
             
             var tc = new CancellationTokenSource();
             var data = await trafficReader.ReadAsyncAsync(3, tc.Token);
-            new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}).ArraysAreEqual(data);
-            trafficReader.CommitReadDataSize(data.Length);
+            new ReadOnlyMemory<byte>(new byte[] {1, 2, 3}).ArraysAreEqual(data.AsArray());
+            trafficReader.CommitReadData(data);
 
             data = await trafficReader.ReadAsyncAsync(10, tc.Token);
-            new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11, 22, 33, 44, 55, 66, 111}).ArraysAreEqual(data);
-            trafficReader.CommitReadDataSize(data.Length);
+            new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11, 22, 33, 44, 55, 66, 111}).ArraysAreEqual(data.AsArray());
+            trafficReader.CommitReadData(data);
         }
     }
 }

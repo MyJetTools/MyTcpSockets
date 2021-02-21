@@ -137,7 +137,7 @@ namespace MyTcpSockets
             try
             {
 #if NETSTANDARD2_1
-                var buffer = trafficReader.AllocateBufferToWrite();
+                var buffer = await trafficReader.AllocateBufferToWriteAsync();
 
                 var readSize =
                     await SocketStream.ReadAsync(buffer, _cancellationToken.Token);
@@ -149,7 +149,7 @@ namespace MyTcpSockets
 
                     trafficReader.CommitWrittenData(readSize);
 
-                    buffer = trafficReader.AllocateBufferToWrite();
+                    buffer = await trafficReader.AllocateBufferToWriteAsync();
 
                     readSize =
                         await SocketStream.ReadAsync(buffer, _cancellationToken.Token);
@@ -157,7 +157,7 @@ namespace MyTcpSockets
 #else
 
 
-                var buffer = trafficReader.AllocateBufferToWriteLegacy();
+                var buffer = await trafficReader.AllocateBufferToWriteLegacyAsync();
                 
                 var readSize =
                     await SocketStream.ReadAsync(buffer.buffer, buffer.start, buffer.len, _cancellationToken.Token);
@@ -168,7 +168,7 @@ namespace MyTcpSockets
 
                     trafficReader.CommitWrittenData(readSize);
 
-                    buffer = trafficReader.AllocateBufferToWriteLegacy();
+                    buffer = await trafficReader.AllocateBufferToWriteLegacyAsync();
 
                     readSize =
                         await SocketStream.ReadAsync(buffer.buffer, buffer.start, buffer.len, _cancellationToken.Token);

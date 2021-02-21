@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using MyTcpSockets.Extensions;
 using NUnit.Framework;
 
@@ -15,23 +16,23 @@ namespace MyTcpSockets.Tests
         }
         
         [Test]
-        public void TestByte()
+        public async Task TestByte()
         {
             var data = new byte[] {1, 2, 3, 4, 5};
             
             var tcpDataReader = new TcpDataReader(10);
             
-            tcpDataReader.NewPackage(data);
+            await tcpDataReader.NewPackageAsync(data);
             
             var token = new CancellationTokenSource();
-            var result = tcpDataReader.ReadAndCommitByteAsync(token.Token).Result;
+            var result = await tcpDataReader.ReadAndCommitByteAsync(token.Token);
             
             Assert.AreEqual(1, result);
         }
         
 
         [Test]
-        public void TestUShort()
+        public async Task TestUShort()
         {
             var data = new byte[10];
             const ushort testValue = 30000;
@@ -39,17 +40,17 @@ namespace MyTcpSockets.Tests
             
             var tcpDataReader = new TcpDataReader(1024);
             
-            tcpDataReader.NewPackage(data);
+            await tcpDataReader.NewPackageAsync(data);
 
             var token = new CancellationTokenSource();
-            var result = tcpDataReader.ReadUShortAsync(token.Token).Result;
+            var result = await tcpDataReader.ReadUShortAsync(token.Token);
             
             Assert.AreEqual(testValue, result);
         }  
 
         
         [Test]
-        public void TestShort()
+        public async Task TestShort()
         {
             var data = new byte[10];
             const short testValue = 30000;
@@ -57,15 +58,15 @@ namespace MyTcpSockets.Tests
             
             var tcpDataReader = new TcpDataReader(1024);
             
-            tcpDataReader.NewPackage(data);
+            await tcpDataReader.NewPackageAsync(data);
             var token = new CancellationTokenSource();
-            var result = tcpDataReader.ReadShortAsync(token.Token).Result;
+            var result = await tcpDataReader.ReadShortAsync(token.Token);
             
             Assert.AreEqual(testValue, result);
         }  
         
         [Test]
-        public void TestUInt()
+        public async Task TestUInt()
         {
             var data = new byte[10];
             const uint testValue = 1234567;
@@ -73,7 +74,7 @@ namespace MyTcpSockets.Tests
             
             var tcpDataReader = new TcpDataReader(1024);
             
-            tcpDataReader.NewPackage(data);
+            await tcpDataReader.NewPackageAsync(data);
             var token = new CancellationTokenSource();
             var result = tcpDataReader.ReadUIntAsync(token.Token).Result;
             
@@ -81,7 +82,7 @@ namespace MyTcpSockets.Tests
         }   
         
         [Test]
-        public void TestInt()
+        public async Task TestInt()
         {
             var data = new byte[10];
             const int testValue = 1234567;
@@ -89,7 +90,7 @@ namespace MyTcpSockets.Tests
             
             var tcpDataReader = new TcpDataReader(1024);
             
-            tcpDataReader.NewPackage(data);
+            await tcpDataReader.NewPackageAsync(data);
             
             var token = new CancellationTokenSource();
             var result = tcpDataReader.ReadIntAsync(token.Token).Result;
@@ -99,7 +100,7 @@ namespace MyTcpSockets.Tests
         
         
         [Test]
-        public void TestULong()
+        public async Task TestULong()
         {
             var data = new byte[10];
             const ulong testValue = 123456789012;
@@ -107,15 +108,15 @@ namespace MyTcpSockets.Tests
             
             var tcpDataReader = new TcpDataReader(1024);
             
-            tcpDataReader.NewPackage(data);
+            await tcpDataReader.NewPackageAsync(data);
             var token = new CancellationTokenSource();
-            var result = tcpDataReader.ReadULongAsync(token.Token).Result;
+            var result = await tcpDataReader.ReadULongAsync(token.Token);
             
             Assert.AreEqual(testValue, result);
         }   
         
         [Test]
-        public void TestLong()
+        public async Task TestLong()
         {
             var data = new byte[10];
             const long testValue = 1234567890123;
@@ -123,16 +124,16 @@ namespace MyTcpSockets.Tests
             
             var tcpDataReader = new TcpDataReader(1024);
             
-            tcpDataReader.NewPackage(data);
+            await tcpDataReader.NewPackageAsync(data);
             var token = new CancellationTokenSource();
-            var result = tcpDataReader.ReadLongAsync(token.Token).Result;
+            var result = await tcpDataReader.ReadLongAsync(token.Token);
             
             Assert.AreEqual(testValue, result);
         } 
         
         
         [Test]
-        public void TestPascalString()
+        public async Task TestPascalString()
         {
            var memoryStream = new MemoryStream();
            const string testValue = "My test String";
@@ -141,15 +142,15 @@ namespace MyTcpSockets.Tests
          
             var tcpDataReader = new TcpDataReader(1024);
             
-            tcpDataReader.NewPackage(memoryStream.ToArray());
+            await tcpDataReader.NewPackageAsync(memoryStream.ToArray());
             var token = new CancellationTokenSource();
-            var result = tcpDataReader.ReadPascalStringAsync(token.Token).Result;
+            var result = await tcpDataReader.ReadPascalStringAsync(token.Token);
             
             Assert.AreEqual(testValue, result);
         } 
         
         [Test]
-        public void TestString()
+        public async Task TestString()
         {
             var memoryStream = new MemoryStream();
             const string testValue = "My test String";
@@ -158,15 +159,15 @@ namespace MyTcpSockets.Tests
          
             var tcpDataReader = new TcpDataReader(1024);
             
-            tcpDataReader.NewPackage(memoryStream.ToArray());
+            await tcpDataReader.NewPackageAsync(memoryStream.ToArray());
             var token = new CancellationTokenSource();
-            var result = tcpDataReader.ReadStringAsync(token.Token).Result;
+            var result = await tcpDataReader.ReadStringAsync(token.Token);
             
             Assert.AreEqual(testValue, result);
         }      
         
         [Test]
-        public void TestByteArray()
+        public async Task TestByteArray()
         {
             var memoryStream = new MemoryStream();
             var testValue =  new byte[]{1,2,3,4,5,6};
@@ -175,9 +176,9 @@ namespace MyTcpSockets.Tests
          
             var tcpDataReader = new TcpDataReader(1024);
             
-            tcpDataReader.NewPackage(memoryStream.ToArray());
+            await tcpDataReader.NewPackageAsync(memoryStream.ToArray());
             var token = new CancellationTokenSource();
-            var result = tcpDataReader.ReadByteArrayAsync(token.Token).Result;
+            var result = await tcpDataReader.ReadByteArrayAsync(token.Token);
 
             TestExtensions.AsReadOnlyMemory(testValue).ArrayIsEqualWith(result);
         } 

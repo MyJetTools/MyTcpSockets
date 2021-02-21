@@ -10,16 +10,16 @@ namespace MyTcpSockets.Tests
     public class TcpDataReaderSequenceModeTests
     {
         [Test]
-        public void TestFindingTheSequenceFeatureAtTheSameArray()
+        public async Task TestFindingTheSequenceFeatureAtTheSameArray()
         {
             var trafficReader = new TcpDataReader(1024);
 
             var incomingArray1 = new byte[] {1, 2, 3, 4, 5, 13};
 
-            trafficReader.NewPackage(incomingArray1);
+            await trafficReader.NewPackageAsync(incomingArray1);
             var tc = new CancellationTokenSource();
-            var data = trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, tc.Token).Result;
-            new ReadOnlyMemory<byte>(new byte[] {1, 2, 3, 4, 5}).ArraysAreEqual(data);
+            var data = await trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, tc.Token);
+            new ReadOnlyMemory<byte>(new byte[] {1, 2, 3, 4, 5}).ArraysAreEqual(data.AsArray());
         }  
         
         [Test]
@@ -30,17 +30,17 @@ namespace MyTcpSockets.Tests
             var incomingArray1 = new byte[] {1, 2, 3, 4, 5};
             var incomingArray2 = new byte[] {11, 12, 13, 4, 5};
 
-            trafficReader.NewPackage(incomingArray1);
-            trafficReader.NewPackage(incomingArray2);
+            await trafficReader.NewPackageAsync(incomingArray1);
+            await trafficReader.NewPackageAsync(incomingArray2);
 
             var tc = new CancellationTokenSource();
-            var data = trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{5, 11}, tc.Token).Result;
-            new ReadOnlyMemory<byte>(new byte[] {1, 2, 3, 4, 5, 11}).ArraysAreEqual(data);
-            trafficReader.CommitReadDataSize(data.Length);
+            var data = await trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{5, 11}, tc.Token);
+            new ReadOnlyMemory<byte>(new byte[] {1, 2, 3, 4, 5, 11}).ArraysAreEqual(data.AsArray());
+            trafficReader.CommitReadData(data);
             
             data = await trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, tc.Token);
-            new ReadOnlyMemory<byte>(new byte[] {12, 13, 4, 5}).ArraysAreEqual(data);
-            trafficReader.CommitReadDataSize(data.Length);
+            new ReadOnlyMemory<byte>(new byte[] {12, 13, 4, 5}).ArraysAreEqual(data.AsArray());
+            trafficReader.CommitReadData(data);
         }  
         
         
@@ -54,16 +54,16 @@ namespace MyTcpSockets.Tests
             var incomingArray1 = new byte[] {1, 2, 3, 4, 5};
             var incomingArray2 = new byte[] {11, 12, 13, 4, 5};
 
-            trafficReader.NewPackage(incomingArray1);
-            trafficReader.NewPackage(incomingArray2);
+            await trafficReader.NewPackageAsync(incomingArray1);
+            await trafficReader.NewPackageAsync(incomingArray2);
             
             var data = await dataTask;
-            new ReadOnlyMemory<byte>(new byte[] {1, 2, 3, 4, 5, 11}).ArraysAreEqual(data);
-            trafficReader.CommitReadDataSize(data.Length);
+            new ReadOnlyMemory<byte>(new byte[] {1, 2, 3, 4, 5, 11}).ArraysAreEqual(data.AsArray());
+            trafficReader.CommitReadData(data);
             
             data = await trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, tc.Token);
-            new ReadOnlyMemory<byte>(new byte[] {12, 13, 4, 5}).ArraysAreEqual(data);
-            trafficReader.CommitReadDataSize(data.Length);
+            new ReadOnlyMemory<byte>(new byte[] {12, 13, 4, 5}).ArraysAreEqual(data.AsArray());
+            trafficReader.CommitReadData(data);
         } 
     }
 }

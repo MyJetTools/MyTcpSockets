@@ -13,12 +13,14 @@ namespace MyTcpSockets.Extensions
         /// <param name="token"></param>
         /// <returns></returns>
         ValueTask<byte> ReadAndCommitByteAsync(CancellationToken token);
-        ValueTask<ReadOnlyMemory<byte>> ReadAsyncAsync(int size, CancellationToken token);
-        void CommitReadDataSize(int size);
-        
-        //   ValueTask<ReadOnlyMemory<byte>> ReadWhileWeGetSequenceAsync(byte[] marker, CancellationToken token);
+        ValueTask<TcpReadResult> ReadAsyncAsync(int size, CancellationToken token);
+        void CommitReadData(TcpReadResult tcpReadResult);
+
+        ValueTask<TcpReadResult> ReadWhileWeGetSequenceAsync(byte[] marker, CancellationToken token);
 
     }
+
+
 
 
     public class TcpDataReader : ITcpDataReader
@@ -84,9 +86,8 @@ namespace MyTcpSockets.Extensions
             lock (_lockObject)
             {
                 _readBuffer.CommitWrittenData(len);
-                _readBuffer.Gc();
-
                 _awaitingReadBuffer.NewBytesAppeared(_readBuffer);
+                _readBuffer.Gc();
             }
 
         }
@@ -108,17 +109,25 @@ namespace MyTcpSockets.Extensions
             }
         }
 
-        public ValueTask<ReadOnlyMemory<byte>> ReadAsyncAsync(int size, CancellationToken token)
+        public ValueTask<TcpReadResult> ReadAsyncAsync(int size, CancellationToken token)
         {
             lock (_lockObject)
             {
                 var result = _readBuffer.TryRead(size);
 
                 if (result.Length > 0)
-                    return new ValueTask<ReadOnlyMemory<byte>>(result);
+                    return new ValueTask<TcpReadResult>(new TcpReadResult(result, null));
 
-                var compileBuffer = size > _readBuffer.BufferSize;
-                return _awaitingReadBuffer.EngageToRead(size, compileBuffer);
+                if (size > _readBuffer.BufferSize)
+                {
+                    var iniMem = _readBuffer.GetWhateverWeHave();
+                    var task = _awaitingReadBuffer.EngageToRead(iniMem, true, size);
+                    _readBuffer.CommitReadData(iniMem.Length);
+                    _awaitingBufferAllocationState.TryToAllocateBufferAgain(_readBuffer);
+                    return task;
+                }
+                
+                return _awaitingReadBuffer.EngageToRead(null, false, size);      
             }
         }
 
@@ -129,13 +138,43 @@ namespace MyTcpSockets.Extensions
             return result;
         }
 
-        public void CommitReadDataSize(int size)
+        public void CommitReadData(TcpReadResult tcpReadResult)
         {
             lock (_lockObject)
             {
-               _readBuffer.CommitReadData(size);
+                if (tcpReadResult.UncommittedMemory.Length > 0)
+                    _readBuffer.CommitReadData(tcpReadResult.UncommittedMemory.Length);
             }
         }
+
+
+        public ValueTask<TcpReadResult> ReadWhileWeGetSequenceAsync(byte[] marker, CancellationToken token)
+        {
+
+            lock (_lockObject)
+            {
+
+                if (_readBuffer.ReadyToReadSize == 0)
+                    return _awaitingReadBuffer.EngageSearchByMarker(default, false, marker);
+
+                var size = _readBuffer.GetSizeByMarker(marker);
+
+
+                if (size == -1)
+                {
+                    var currentBuffer = _readBuffer.GetWhateverWeHave();
+                    var resultAsTask = _awaitingReadBuffer.EngageSearchByMarker(currentBuffer, true, marker);
+                    _readBuffer.CommitReadData(currentBuffer.Length);
+                    _awaitingBufferAllocationState.TryToAllocateBufferAgain(_readBuffer);
+                    return resultAsTask;
+                }
+
+                var result = _readBuffer.TryRead(size);
+                return new ValueTask<TcpReadResult>(new TcpReadResult(result, null));
+            }
+
+        }
+
 
         public void Stop()
         {
@@ -151,8 +190,7 @@ namespace MyTcpSockets.Extensions
         {
             lock (_lockObject)
             {
-                return "Start:" + _readBuffer.ReadyToReadStart + "Len:" + _readBuffer.ReadyToReadSize + "[" +
-                       _readBuffer + "]";
+                return "Start:" + _readBuffer.ReadyToReadStart + "Len:" + _readBuffer.ReadyToReadSize;
             }
         }
 

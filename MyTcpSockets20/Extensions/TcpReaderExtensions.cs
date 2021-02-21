@@ -1,4 +1,3 @@
-using System;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +11,7 @@ namespace MyTcpSockets.Extensions
         {
             var data = await reader.ReadAsyncAsync(sizeof(ushort), ct);
             var result =  BitConverter20.ToUInt16(data.Span);
-            reader.CommitReadDataSize(data.Length);
+            reader.CommitReadData(data);
             return result;
         }     
         
@@ -20,7 +19,7 @@ namespace MyTcpSockets.Extensions
         {
             var data = await reader.ReadAsyncAsync(sizeof(short), ct);
             var result = BitConverter20.ToInt16(data.Span);
-            reader.CommitReadDataSize(data.Length);
+            reader.CommitReadData(data);
             return result;
         } 
         
@@ -28,7 +27,7 @@ namespace MyTcpSockets.Extensions
         {
             var data = await reader.ReadAsyncAsync(sizeof(int), ct);
             var result = BitConverter20.ToInt32(data.Span);
-            reader.CommitReadDataSize(data.Length);
+            reader.CommitReadData(data);
             return result;
         }     
         
@@ -36,7 +35,7 @@ namespace MyTcpSockets.Extensions
         {
             var data = await reader.ReadAsyncAsync(sizeof(uint), ct);
             var result = BitConverter20.ToUInt32(data.Span);
-            reader.CommitReadDataSize(data.Length);
+            reader.CommitReadData(data);
             return result;
         } 
         
@@ -44,7 +43,7 @@ namespace MyTcpSockets.Extensions
         {
             var data = await reader.ReadAsyncAsync(sizeof(long), ct);
             var result = BitConverter20.ToInt64(data.Span);
-            reader.CommitReadDataSize(data.Length);
+            reader.CommitReadData(data);
             return result;
         }     
         
@@ -52,7 +51,7 @@ namespace MyTcpSockets.Extensions
         {
             var data = await reader.ReadAsyncAsync(sizeof(ulong), ct);
             var result = BitConverter20.ToUInt64(data.Span);
-            reader.CommitReadDataSize(data.Length);
+            reader.CommitReadData(data);
             return result;
         }
 
@@ -64,8 +63,8 @@ namespace MyTcpSockets.Extensions
             if (encoding == null)
                 encoding = Encoding.UTF8;
             
-            var result =  encoding.GetString(data.ToArray());
-            reader.CommitReadDataSize(data.Length);
+            var result =  encoding.GetString(data.AsArray());
+            reader.CommitReadData(data);
             return result;
         }
         
@@ -77,8 +76,8 @@ namespace MyTcpSockets.Extensions
             if (encoding == null)
                 encoding = Encoding.UTF8;
             
-            var result = encoding.GetString(data.ToArray());
-            reader.CommitReadDataSize(data.Length);
+            var result = encoding.GetString(data.AsArray());
+            reader.CommitReadData(data);
             return result;
         }
         
@@ -86,8 +85,8 @@ namespace MyTcpSockets.Extensions
         {
             var strLen = await reader.ReadIntAsync(ct);
             var data = await reader.ReadAsyncAsync(strLen, ct);
-            var result = data.ToArray();
-            reader.CommitReadDataSize(data.Length);
+            var result = data.AsArray();
+            reader.CommitReadData(data);
             return result;
         }
         

@@ -13,6 +13,8 @@ namespace MyTcpSockets.Extensions
         public int WriteIndex => ReadyToReadStart + ReadyToReadSize;
 
         public int WriteSize => _data.Length - WriteIndex;
+        
+        public int AllocatedToWrite { get; private set; }
 
         internal IEnumerable<byte> Iterate()
         {
@@ -32,6 +34,9 @@ namespace MyTcpSockets.Extensions
 
         internal void Gc()
         {
+            if (AllocatedToWrite >0)
+                return;
+            
             if (ReadyToReadStart == 0)
                 return;
 
@@ -45,6 +50,8 @@ namespace MyTcpSockets.Extensions
         public Memory<byte> AllocateBufferToWrite()
         {
             var writeSize = WriteSize;
+
+            AllocatedToWrite += writeSize;
             
             return writeSize == 0 ? null 
                 : new Memory<byte>(_data, WriteIndex, writeSize);
@@ -61,6 +68,7 @@ namespace MyTcpSockets.Extensions
         public void CommitWrittenData(int size)
         {
             ReadyToReadSize += size;
+            AllocatedToWrite -= size;
         }
 
         public ReadOnlyMemory<byte> TryRead(int size)
@@ -68,6 +76,14 @@ namespace MyTcpSockets.Extensions
             return ReadyToReadSize < size 
                 ? new ReadOnlyMemory<byte>() 
                 : new ReadOnlyMemory<byte>(_data, ReadyToReadStart, size);
+        }
+
+
+        public ReadOnlyMemory<byte> GetWhateverWeHave()
+        {
+            return ReadyToReadSize == 0
+                ? new ReadOnlyMemory<byte>() 
+                : new ReadOnlyMemory<byte>(_data, ReadyToReadStart, ReadyToReadSize);
         }
 
         public byte ReadByte()
@@ -80,13 +96,16 @@ namespace MyTcpSockets.Extensions
         /// </summary>
         /// <param name="size"></param>
         /// <returns>Available size after commit</returns>
-        public int CommitReadData(int size)
+        public void CommitReadData(int size)
         {
-            var sizeToCommit = size >= ReadyToReadSize ? ReadyToReadSize : size;
+            if (size > ReadyToReadSize)
+                throw new Exception($"You try to commit {size} which iS grater size than {ReadyToReadSize}");
             
-            ReadyToReadStart += sizeToCommit;
-            ReadyToReadSize -= sizeToCommit;
-            return size - sizeToCommit;
+            ReadyToReadStart += size;
+            ReadyToReadSize -= size;
+
+            if (ReadyToReadSize == 0 && AllocatedToWrite == 0)
+                ReadyToReadSize = 0;
         }
 
     }

@@ -47,6 +47,30 @@ namespace MyTcpSockets.Extensions
         {
             AllocatedBufferSize = len;
         }
+
+
+        public void TryToAllocateBufferAgain(TcpDataPiece dataPiece)
+        {
+            if (_bufferAllocationTask != null)
+            {
+                var allocatedBuffer = dataPiece.AllocateBufferToWrite();
+                var resultTask = _bufferAllocationTask;
+                _bufferAllocationTask = null;
+                AllocatedBufferSize = allocatedBuffer.Length;
+                resultTask.SetResult(allocatedBuffer);
+                return;
+            }
+            
+            if (_bufferAllocationTaskLegacy != null)
+            {
+                var allocatedBuffer = dataPiece.AllocateBufferToWriteLegacy();
+                var resultTask = _bufferAllocationTaskLegacy;
+                _bufferAllocationTask = null;
+                AllocatedBufferSize = allocatedBuffer.len;
+                resultTask.SetResult(allocatedBuffer);
+            }
+            
+        }
         
     }
 

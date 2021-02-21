@@ -7,12 +7,7 @@ namespace MyTcpSockets.Extensions
 {
     public static class TcpReaderExtensions
     {
-        
-        public static void CommitReadData(this ITcpDataReader dataReader, ReadOnlyMemory<byte> data)
-        {
-            dataReader.CommitReadDataSize(data.Length);
-        }
-        
+
         public static async ValueTask<ushort> ReadUShortAsync(this ITcpDataReader reader, CancellationToken token)
         {
             var data = await reader.ReadAsyncAsync(sizeof(ushort), token);
@@ -84,9 +79,9 @@ namespace MyTcpSockets.Extensions
         public static async ValueTask<byte[]> ReadByteArrayAsync(this ITcpDataReader reader, CancellationToken token)
         {
             var strLen = await reader.ReadIntAsync(token);
-            var result= (await reader.ReadAsyncAsync(strLen, token)).ToArray();
-            reader.CommitReadDataSize(strLen);
-            return result;
+            var result = await reader.ReadAsyncAsync(strLen, token);
+            reader.CommitReadData(result);
+            return result.AsArray();
         }
         
     }

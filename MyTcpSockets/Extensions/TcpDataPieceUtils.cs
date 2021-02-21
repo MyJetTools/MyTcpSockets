@@ -1,9 +1,37 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace MyTcpSockets.Extensions
 {
+    
+    public struct TcpReadResult
+    {
+        public ReadOnlyMemory<byte> UncommittedMemory { get;  }
+        
+        public byte[] CommittedMemory { get; }
+
+        public TcpReadResult(ReadOnlyMemory<byte> uncommittedMemory, byte[] committedMemory)
+        {
+            UncommittedMemory = uncommittedMemory;
+            CommittedMemory = committedMemory;
+        }
+
+        public int Length => CommittedMemory?.Length ?? UncommittedMemory.Length;
+
+
+        public ReadOnlySpan<byte> Span => CommittedMemory == null ? UncommittedMemory.Span : CommittedMemory.AsSpan();
+
+        public byte[] AsArray()
+        {
+            return CommittedMemory ?? UncommittedMemory.ToArray();
+        }
+
+    }
+    
+    
+    
     public static class TcpDataPieceUtils
     {
 
@@ -15,6 +43,8 @@ namespace MyTcpSockets.Extensions
             return (true, dataList[0].ReadByte());
         }
 
+        
+        /*
         internal static ReadOnlyMemory<byte> TryCompilePackage(this List<TcpDataPiece> dataList, int size)
         {
             if (size == 0)
@@ -65,7 +95,8 @@ namespace MyTcpSockets.Extensions
             }
                 
         }
-
+        */
+        
         private static int ReadyToReadSize(this IEnumerable<TcpDataPiece> src)
         {
             return src.Sum(itm => itm.ReadyToReadSize);
@@ -77,11 +108,38 @@ namespace MyTcpSockets.Extensions
             return src.SelectMany(itm => itm.Iterate());
         }
 
-        public static int GetSizeByMarker(this IEnumerable<TcpDataPiece> src, IReadOnlyList<byte> marker)
+
+        private static IEnumerable<byte> Iterate(this MemoryStream stream, TcpDataPiece src)
+        {
+            var buffer = stream.GetBuffer();
+            for (var i=0; i<stream.Length; i++)
+            {
+                yield return buffer[i];
+            }
+
+            foreach (var b in src.Iterate())
+            {
+                yield return b;
+            }
+            
+        }
+        
+
+        public static int GetSizeByMarker(this MemoryStream stream, TcpDataPiece src, IReadOnlyList<byte> marker)
+        {
+            return stream.Iterate(src).GetSizeByMarker(marker);
+        }
+
+        public static int GetSizeByMarker(this TcpDataPiece src, IReadOnlyList<byte> marker)
+        {
+            return src.Iterate().GetSizeByMarker(marker);
+        }
+
+        public static int GetSizeByMarker(this IEnumerable<byte> src, IReadOnlyList<byte> marker)
         {
             var pos = 0;
             var markerPos = 0;
-            foreach (var b in src.GetAll())
+            foreach (var b in src)
             {
                 if (marker[markerPos] == b)
                 {
@@ -94,7 +152,7 @@ namespace MyTcpSockets.Extensions
                 pos++;
             }
 
-            return-1;
+            return -1;
         }
 
         

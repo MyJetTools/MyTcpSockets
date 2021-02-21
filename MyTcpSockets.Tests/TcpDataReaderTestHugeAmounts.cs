@@ -18,11 +18,15 @@ namespace MyTcpSockets.Tests
                 list.Add(i);
 
             var src = list.ToArray();
-            dataReader.NewPackage(src);
+            var task = dataReader.NewPackageAsync(src);
 
             
             var result = await dataReader.ReadAsyncAsync(255, new CancellationTokenSource().Token);
-            src.ArraysAreEqual(result);
+            src.ArraysAreEqual(result.AsArray());
+            dataReader.CommitReadData(result);
+
+            await task;
+
         } 
     }
 }
