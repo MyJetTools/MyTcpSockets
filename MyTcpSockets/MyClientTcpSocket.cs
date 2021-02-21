@@ -143,6 +143,7 @@ namespace MyTcpSockets
                     try
                     {
                         CurrentTcpContext = await ConnectAsync(ipEndPoint, socketId);
+                        Connected = true;
                         socketId++;
 
                         CurrentTcpContext.StartReadThread(_readBufferSize);
@@ -158,6 +159,7 @@ namespace MyTcpSockets
                     }
                     finally
                     {
+                        Connected = false;
                         CurrentTcpContext = null;
                     }
                 }
@@ -195,6 +197,9 @@ namespace MyTcpSockets
             var socketLoopTask = _socketLoop;
             socketLoopTask?.Wait();
         }
+        
+        
+        public bool Connected { get; private set; }
 
 
     }
