@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace MyTcpSockets.Extensions
 {
@@ -76,6 +75,11 @@ namespace MyTcpSockets.Extensions
             return _data[ReadyToReadStart];
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="size"></param>
+        /// <returns>Available size after commit</returns>
         public int CommitReadData(int size)
         {
             var sizeToCommit = size >= ReadyToReadSize ? ReadyToReadSize : size;

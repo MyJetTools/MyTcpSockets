@@ -8,6 +8,11 @@ namespace MyTcpSockets.Extensions
     public static class TcpReaderExtensions
     {
         
+        public static void CommitReadData(this ITcpDataReader dataReader, ReadOnlyMemory<byte> data)
+        {
+            dataReader.CommitReadDataSize(data.Length);
+        }
+        
         public static async ValueTask<ushort> ReadUShortAsync(this ITcpDataReader reader, CancellationToken token)
         {
             var data = await reader.ReadAsyncAsync(sizeof(ushort), token);
