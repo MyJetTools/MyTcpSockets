@@ -27,13 +27,11 @@ namespace MyTcpSockets
         private readonly byte[] _deliveryBuffer;
         
         private int _readBufferSize = 1024 * 1024 * 2;
-        private int _minReadBufferAllocationSize;
 
         
-        public MyClientTcpSocket<TSocketData> SetReadBufferSize(int readBufferSize, int minReadBufferAllocationSize)
+        public MyClientTcpSocket<TSocketData> SetReadBufferSize(int readBufferSize)
         {
             _readBufferSize = readBufferSize;
-            _minReadBufferAllocationSize = minReadBufferAllocationSize;
             return this;
         }
         
@@ -45,8 +43,6 @@ namespace MyTcpSockets
             SetPingInterval(TimeSpan.FromSeconds(3));
 
             _deliveryBuffer = new byte[sendBufferSize];
-
-            _minReadBufferAllocationSize = 1024;
         }
 
         public MyClientTcpSocket<TSocketData> AddLog(Action<ITcpContext, object> log)
@@ -149,7 +145,7 @@ namespace MyTcpSockets
                         CurrentTcpContext = await ConnectAsync(ipEndPoint, socketId);
                         socketId++;
 
-                        CurrentTcpContext.StartReadThread(_readBufferSize, _minReadBufferAllocationSize);
+                        CurrentTcpContext.StartReadThread(_readBufferSize);
 
                         await CheckDeadSocketAsync(CurrentTcpContext);
                         Console.WriteLine("Here");

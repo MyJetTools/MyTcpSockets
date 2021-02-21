@@ -42,9 +42,6 @@ namespace MyTcpSockets.Extensions
 
         private bool _stopped;
 
-
-
-
         public ValueTask<ReadOnlyMemory<byte>> DequeueAsync(byte[] deliveryBuffer)
         {
             lock (_lockObject)

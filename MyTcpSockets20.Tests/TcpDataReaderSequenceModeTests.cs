@@ -1,17 +1,18 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using MyTcpSockets.Tests;
+using MyTcpSockets.Extensions;
+using MyTcpSockets.Extensions.Tests;
 using NUnit.Framework;
 
-namespace MyTcpSockets.Extensions.Tests
+namespace MyTcpSockets.Tests
 {
     public class TcpDataReaderSequenceModeTests
     {
         [Test]
         public void TestFindingTheSequenceFeatureAtTheSameArray()
         {
-            var trafficReader = new TcpDataReader(1024, 512);
+            var trafficReader = new TcpDataReader(1024);
 
             var incomingArray1 = new byte[] {1, 2, 3, 4, 5, 13};
 
@@ -24,7 +25,7 @@ namespace MyTcpSockets.Extensions.Tests
         [Test]
         public async Task TestFindingTheSequenceFeatureByReadingToArraysAtTheEnd()
         {
-            var trafficReader = new TcpDataReader(1024, 512);
+            var trafficReader = new TcpDataReader(1024);
 
             var incomingArray1 = new byte[] {1, 2, 3, 4, 5};
             var incomingArray2 = new byte[] {11, 12, 13, 4, 5};
@@ -46,7 +47,7 @@ namespace MyTcpSockets.Extensions.Tests
         [Test]
         public async Task TestFindingTheSequenceFeatureByReadingToArraysAtTheEndOtherWayAround()
         {
-            var trafficReader = new TcpDataReader(1024, 512);
+            var trafficReader = new TcpDataReader(1024);
             var tc = new CancellationTokenSource();
             var dataTask = trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{5, 11}, tc.Token);
             

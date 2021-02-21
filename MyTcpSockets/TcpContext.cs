@@ -187,11 +187,11 @@ namespace MyTcpSockets
 
         }
 
-        private async Task ReadLoopAsync(int bufferSize, int minAllocationSize)
+        private async Task ReadLoopAsync(int bufferSize)
         {
             try
             {
-                var trafficReader = new TcpDataReader(bufferSize, minAllocationSize);
+                var trafficReader = new TcpDataReader(bufferSize);
 
                 var trafficWriterTask = PublishDataToTrafficReaderAsync(trafficReader);
 
@@ -218,9 +218,9 @@ namespace MyTcpSockets
 
         protected Task ReadLoopTask { get; private set; }
         protected Task SendTrafficTask { get; private set; }
-        internal void StartReadThread(int bufferSize, int minAllocationSize)
+        internal void StartReadThread(int bufferSize)
         {
-            ReadLoopTask = ReadLoopAsync(bufferSize, minAllocationSize);
+            ReadLoopTask = ReadLoopAsync(bufferSize);
             SendTrafficTask = StartSendDeliveryTaskAsync();
         }
         #endregion
@@ -232,8 +232,10 @@ namespace MyTcpSockets
 
         private TcpSocketPublisherSubscriber _deliveryPublisherSubscriber;
 
-
-
+        
+        private DateTime _lastSendTime = DateTime.UtcNow;
+        
+        private readonly TimeSpan _timeSpan = TimeSpan.FromMilliseconds(1);
         private async Task StartSendDeliveryTaskAsync()
         {
 
@@ -253,6 +255,21 @@ namespace MyTcpSockets
                     await SocketStream.WriteAsync(dataToSend);
                     SocketStatistic.WeHaveSendEvent(dataToSend.Length);
                     SocketStatistic.LastSendToSocketDuration = DateTime.UtcNow - dt;
+
+                    if (DateTime.UtcNow - _lastSendTime > TimeSpan.FromSeconds(1) || SocketStatistic.LastSendToSocketDuration>_timeSpan)
+                    {
+                        if (SocketStatistic.LastSendToSocketDuration > _timeSpan)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine($"{DateTime.UtcNow:O}Last send duration: {SocketStatistic.LastSendToSocketDuration}");
+                            Console.ResetColor();
+                        }
+                        else
+                        {
+                            Console.WriteLine($"{DateTime.UtcNow:O}Last send duration: {SocketStatistic.LastSendToSocketDuration}");
+                        }
+                        _lastSendTime = DateTime.UtcNow;
+                    }
                 }
                 catch (Exception e)
                 {
@@ -287,7 +304,7 @@ namespace MyTcpSockets
         {
             ContextName = contextName;
             Inited = true;
-            WriteLog($"Changed context name to: {contextName} for socket id: {Id} with ip: {TcpClient.Client.RemoteEndPoint}");
+            WriteLog($"Changed context name to: {contextName} for socket id: {Id} with ip: {TcpClient?.Client.RemoteEndPoint}");
         }
 
         public SocketStatistic SocketStatistic { get; private set; }
@@ -310,8 +327,6 @@ namespace MyTcpSockets
             }
         
         }
-
-
 
         internal ValueTask StartAsync(TcpClient tcpClient, ITcpSerializer<TSocketData> tcpSerializer, object lockObject, Action<ITcpContext, object> log, 
             Action<ITcpContext> disconnectedCallback, byte[] deliveryBuffer)

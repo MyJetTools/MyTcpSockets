@@ -21,36 +21,39 @@ namespace MyTcpSockets.Extensions
     public class TcpDataReader : ITcpDataReader
     {
         public  int ReadBufferSize { get; }
-        private readonly int _minAllocationSize;
         
         private readonly List<TcpDataPiece> _incomingPackages = new List<TcpDataPiece>();
 
         private readonly object _lockObject = new object();
         private readonly object _readLock = new object();
 
-        public TcpDataReader(int readBufferSize, int minAllocationSize)
+        public TcpDataReader(int readBufferSize)
         {
             ReadBufferSize = readBufferSize;
-            _minAllocationSize = minAllocationSize;
             _incomingPackages.Add(new TcpDataPiece(readBufferSize));
         }
 
         #region write
 
+        private int _allocatedBufferSize;
         public Memory<byte> AllocateBufferToWrite()
         {
             lock (_lockObject)
             {
 
                 var result = _incomingPackages[_incomingPackages.Count - 1].AllocateBufferToWrite();
+                
 
                 if (result.Length > 0)
+                {
+                    _allocatedBufferSize = result.Length;
                     return result;
+                }
 
                 _incomingPackages.Add(new TcpDataPiece(ReadBufferSize));
-
-                return _incomingPackages[_incomingPackages.Count - 1].AllocateBufferToWrite();
-
+                result =  _incomingPackages[_incomingPackages.Count - 1].AllocateBufferToWrite();
+                _allocatedBufferSize = result.Length;
+                return result;
             }
         }
         
@@ -89,6 +92,10 @@ namespace MyTcpSockets.Extensions
 
         public void CommitWrittenData(int len)
         {
+
+            if (len > _allocatedBufferSize)
+                throw new Exception(
+                    $"You are trying to commit grater mem size:{len} than you have allocated earlier: {_allocatedBufferSize} ");
          
             lock (_lockObject)
             {

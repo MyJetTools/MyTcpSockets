@@ -27,7 +27,6 @@ namespace MyTcpSockets
 
 
         private int _readBufferSize = 1024 * 1024 * 2;
-        private int _minReadBufferAllocationSize;
 
         public MyServerTcpSocket(IPEndPoint ipEndPoint, int sendBufferSize = 2048*2048)
         {
@@ -37,13 +36,11 @@ namespace MyTcpSockets
             _ipEndPoint = ipEndPoint;
             _sendBufferSize = sendBufferSize;
             _connections = new Connections<TSocketData>();
-            _minReadBufferAllocationSize = 1024;
         }
 
-        public MyServerTcpSocket<TSocketData> SetReadBufferSize(int readBufferSize, int minReadBufferAllocationSize)
+        public MyServerTcpSocket<TSocketData> SetReadBufferSize(int readBufferSize)
         {
             _readBufferSize = readBufferSize;
-            _minReadBufferAllocationSize = minReadBufferAllocationSize;
             return this;
         }
 
@@ -126,7 +123,7 @@ namespace MyTcpSockets
             _log?.Invoke(tcpContext,
                 $"Socket Accepted; Ip:{acceptedSocket.Client.RemoteEndPoint}. Id=" + tcpContext.Id);
 
-            tcpContext.StartReadThread(_readBufferSize, _minReadBufferAllocationSize);
+            tcpContext.StartReadThread(_readBufferSize);
         }
 
         private async Task AcceptSocketLoopAsync()

@@ -12,7 +12,7 @@ namespace MyTcpSockets.Tests
         public async Task TestSizeWithSeveralChunks()
         {
 
-            var trafficReader = new TcpDataReader(5,2);
+            var trafficReader = new TcpDataReader(5);
 
             var incomingArray = new byte[] {1, 2, 3, 4, 5};
 
@@ -36,7 +36,7 @@ namespace MyTcpSockets.Tests
         public async Task TestSearchWithSeveralChunks()
         {
 
-            var trafficReader = new TcpDataReader(5,2);
+            var trafficReader = new TcpDataReader(5);
 
             var incomingArray = new byte[] {1, 2, 3, 4, 5};
 

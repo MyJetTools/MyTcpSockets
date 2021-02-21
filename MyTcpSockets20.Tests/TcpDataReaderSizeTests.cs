@@ -12,7 +12,7 @@ namespace MyTcpSockets.Tests
         [Test]
         public async Task TestBasicFeature()
         {
-            var trafficReader = new TcpDataReader(1024, 512);
+            var trafficReader = new TcpDataReader(1024);
 
             var incomingArray = new byte[] {1, 2, 3, 4, 5, 6};
 
@@ -33,7 +33,7 @@ namespace MyTcpSockets.Tests
         [Test]
         public async Task TestOverflowFeature()
         {
-            var trafficReader = new TcpDataReader(1024, 512);
+            var trafficReader = new TcpDataReader(1024);
 
             var incomingArray1 = new byte[] {1, 2, 3, 4, 5, 6};
             var incomingArray2 = new byte[] {11, 22, 33, 44, 55, 66};
@@ -56,7 +56,7 @@ namespace MyTcpSockets.Tests
         [Test]
         public async Task TestDoubleOverflowFeature()
         {
-            var trafficReader = new TcpDataReader(1024, 512);
+            var trafficReader = new TcpDataReader(1024);
 
             var incomingArray1 = new byte[] {1, 2, 3, 4, 5, 6};
             var incomingArray2 = new byte[] {11, 22,};
@@ -81,7 +81,7 @@ namespace MyTcpSockets.Tests
         [Test]
         public async Task TestDoubleVeryOverflowFeature()
         {
-            var trafficReader = new TcpDataReader(1024, 512);
+            var trafficReader = new TcpDataReader(1024);
 
             var incomingArray1 = new byte[] {1, 2, 3, 4, 5, 6};
             var incomingArray2 = new byte[] {11, 22, 33, 44, 55, 66,};
