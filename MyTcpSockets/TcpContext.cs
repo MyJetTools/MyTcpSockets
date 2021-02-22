@@ -231,11 +231,7 @@ namespace MyTcpSockets
         private byte[] _deliveryBuffer;
 
         private TcpSocketPublisherSubscriber _deliveryPublisherSubscriber;
-
         
-        private DateTime _lastSendTime = DateTime.UtcNow;
-        
-        private readonly TimeSpan _timeSpan = TimeSpan.FromMilliseconds(1);
         private async Task StartSendDeliveryTaskAsync()
         {
 
@@ -255,21 +251,6 @@ namespace MyTcpSockets
                     await SocketStream.WriteAsync(dataToSend);
                     SocketStatistic.WeHaveSendEvent(dataToSend.Length);
                     SocketStatistic.LastSendToSocketDuration = DateTime.UtcNow - dt;
-
-                    if (DateTime.UtcNow - _lastSendTime > TimeSpan.FromSeconds(1) || SocketStatistic.LastSendToSocketDuration>_timeSpan)
-                    {
-                        if (SocketStatistic.LastSendToSocketDuration > _timeSpan)
-                        {
-                            Console.ForegroundColor = ConsoleColor.Red;
-                            Console.WriteLine($"{DateTime.UtcNow:O}Last send duration: {SocketStatistic.LastSendToSocketDuration}");
-                            Console.ResetColor();
-                        }
-                        else
-                        {
-                            Console.WriteLine($"{DateTime.UtcNow:O}Last send duration: {SocketStatistic.LastSendToSocketDuration}");
-                        }
-                        _lastSendTime = DateTime.UtcNow;
-                    }
                 }
                 catch (Exception e)
                 {
