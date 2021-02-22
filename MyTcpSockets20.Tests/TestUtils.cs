@@ -50,5 +50,14 @@ namespace MyTcpSockets.Tests
                 remainSize -= copySize;
             }
         }
+        
+        public static async Task NewPackagesAsync(this TcpDataReader tcpDataReader, params byte[][] dataChunks)
+        {
+            foreach (var dataChunk in dataChunks)
+            {
+                await NewPackageAsync(tcpDataReader, dataChunk);
+            }
+        }
+
     }
 }
