@@ -15,6 +15,10 @@ namespace MyTcpSockets.Extensions
         public int WriteSize => _data.Length - WriteIndex;
         
         public int AllocatedToWrite { get; private set; }
+        public int AllocatedToRead { get; private set; }
+
+
+        public bool FullOfData => ReadyToReadSize == _data.Length;
 
         internal IEnumerable<byte> Iterate()
         {
@@ -49,6 +53,8 @@ namespace MyTcpSockets.Extensions
 
         public Memory<byte> AllocateBufferToWrite()
         {
+            Gc();
+            
             var writeSize = WriteSize;
 
             AllocatedToWrite += writeSize;
@@ -59,6 +65,8 @@ namespace MyTcpSockets.Extensions
 
         public (byte[] buffer, int start, int len) AllocateBufferToWriteLegacy()
         {
+            Gc();
+            
             var writeSize = WriteSize;
             
             AllocatedToWrite += writeSize;
@@ -70,27 +78,37 @@ namespace MyTcpSockets.Extensions
         
         public void CommitWrittenData(int size)
         {
+            if (size > AllocatedToWrite)
+                throw new Exception($"You can not commit written amount {size} because allocated amount was {AllocatedToWrite}");
+            
             ReadyToReadSize += size;
             AllocatedToWrite = 0;
         }
 
         public ReadOnlyMemory<byte> TryRead(int size)
         {
-            return ReadyToReadSize < size 
+            Gc();
+            AllocatedToRead = ReadyToReadSize < size ? 0 : size;
+            
+            return  AllocatedToRead == 0
                 ? new ReadOnlyMemory<byte>() 
-                : new ReadOnlyMemory<byte>(_data, ReadyToReadStart, size);
+                : new ReadOnlyMemory<byte>(_data, ReadyToReadStart, AllocatedToRead);
         }
 
 
         public ReadOnlyMemory<byte> GetWhateverWeHave()
         {
-            return ReadyToReadSize == 0
+            Gc();
+            AllocatedToRead = ReadyToReadSize;
+            
+            return AllocatedToRead == 0
                 ? new ReadOnlyMemory<byte>() 
-                : new ReadOnlyMemory<byte>(_data, ReadyToReadStart, ReadyToReadSize);
+                : new ReadOnlyMemory<byte>(_data, ReadyToReadStart, AllocatedToRead);
         }
 
         public byte ReadByte()
         {
+            AllocatedToRead = 1;
             return _data[ReadyToReadStart];
         }
 
@@ -103,12 +121,15 @@ namespace MyTcpSockets.Extensions
         {
             if (size > ReadyToReadSize)
                 throw new Exception($"You try to commit {size} which iS grater size than {ReadyToReadSize}");
+
+            AllocatedToRead = 0;
             
             ReadyToReadStart += size;
             ReadyToReadSize -= size;
 
             if (ReadyToReadSize == 0 && AllocatedToWrite == 0)
                 ReadyToReadSize = 0;
+            
         }
 
     }

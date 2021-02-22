@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using MyTcpSockets.Extensions;
 using NUnit.Framework;
@@ -50,7 +51,9 @@ namespace MyTcpSockets.Tests
 
             while (remainSize>0)
             {
-                var buf = await tcpDataReader.AllocateBufferToWriteAsync();
+                var cancellationToken = new CancellationTokenSource();
+
+                var buf = await tcpDataReader.AllocateBufferToWriteAsync(cancellationToken.Token);
 
                 var copySize = buf.Length < remainSize ? buf.Length : remainSize;
                 
@@ -59,8 +62,14 @@ namespace MyTcpSockets.Tests
                 pos += copySize;
                 remainSize -= copySize;
             }
+        }
 
-
+        public static async Task NewPackagesAsync(this TcpDataReader tcpDataReader, params byte[][] dataChunks)
+        {
+            foreach (var dataChunk in dataChunks)
+            {
+                await NewPackageAsync(tcpDataReader, dataChunk);
+            }
         }
 
         public static void Print(this ReadOnlyMemory<byte> src)

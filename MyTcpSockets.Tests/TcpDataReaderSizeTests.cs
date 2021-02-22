@@ -46,8 +46,7 @@ namespace MyTcpSockets.Tests
             var incomingArray1 = new byte[] {1, 2, 3, 4, 5, 6};
             var incomingArray2 = new byte[] {11, 22, 33, 44, 55, 66};
 
-            await trafficReader.NewPackageAsync(incomingArray1);
-            await trafficReader.NewPackageAsync(incomingArray2);
+            var writeTask = trafficReader.NewPackagesAsync(incomingArray1, incomingArray2);
 
             var token = new CancellationTokenSource();
             var data = await trafficReader.ReadAsyncAsync(3, token.Token);
@@ -58,6 +57,8 @@ namespace MyTcpSockets.Tests
             data = await trafficReader.ReadAsyncAsync(4, token.Token);
             new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11}).ArrayIsEqualWith(data.AsArray());
             trafficReader.CommitReadData(data);
+
+            await writeTask;
         }
 
         [Test]
@@ -69,9 +70,7 @@ namespace MyTcpSockets.Tests
             var incomingArray2 = new byte[] {11, 22,};
             var incomingArray3 = new byte[] {111, 222, 233, 244, 254, 255};
 
-            await trafficReader.NewPackageAsync(incomingArray1);
-            await trafficReader.NewPackageAsync(incomingArray2);
-            await trafficReader.NewPackageAsync(incomingArray3);
+            var writeTask = trafficReader.NewPackagesAsync(incomingArray1, incomingArray2, incomingArray3);
 
             var token = new CancellationTokenSource();
             var data = await trafficReader.ReadAsyncAsync(3, token.Token);
@@ -81,7 +80,9 @@ namespace MyTcpSockets.Tests
             data = await trafficReader.ReadAsyncAsync(6, token.Token);
             new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11, 22, 111}).ArrayIsEqualWith(data.AsArray());
             trafficReader.CommitReadData(data);
-            
+
+            await writeTask;
+
         }
 
         [Test]
@@ -93,9 +94,7 @@ namespace MyTcpSockets.Tests
             var incomingArray2 = new byte[] {11, 22, 33, 44, 55, 66,};
             var incomingArray3 = new byte[] {111, 222, 233, 244, 254, 255};
 
-            await trafficReader.NewPackageAsync(incomingArray1);
-            await trafficReader.NewPackageAsync(incomingArray2);
-            await trafficReader.NewPackageAsync(incomingArray3);
+            var writeTask = trafficReader.NewPackagesAsync(incomingArray1, incomingArray2, incomingArray3);
 
             var token = new CancellationTokenSource();
             var data = await trafficReader.ReadAsyncAsync(3, token.Token);
@@ -105,7 +104,9 @@ namespace MyTcpSockets.Tests
             data = await trafficReader.ReadAsyncAsync(10, token.Token);
             new ReadOnlyMemory<byte>(new byte[] {4, 5, 6, 11, 22, 33, 44, 55, 66, 111}).ArrayIsEqualWith(data.AsArray());
             trafficReader.CommitReadData(data);
-            
+
+            await writeTask;
+
         }
         
 

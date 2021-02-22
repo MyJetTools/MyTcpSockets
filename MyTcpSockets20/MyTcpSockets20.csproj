@@ -22,12 +22,6 @@
       <Compile Include="..\MyTcpSockets\Connections.cs">
         <Link>Connections.cs</Link>
       </Compile>
-      <Compile Include="..\MyTcpSockets\Extensions\AwaitingBufferAllocationState.cs">
-        <Link>AwaitingBufferAllocationState.cs</Link>
-      </Compile>
-      <Compile Include="..\MyTcpSockets\Extensions\AwaitingReadBuffer.cs">
-        <Link>AwaitingReadBuffer.cs</Link>
-      </Compile>
       <Compile Include="..\MyTcpSockets\Extensions\ITcpDataPipe.cs">
         <Link>Extensions\ITcpDataPipe.cs</Link>
       </Compile>
@@ -36,6 +30,9 @@
       </Compile>
       <Compile Include="..\MyTcpSockets\Extensions\ReadOnlyMemoryUtils.cs">
         <Link>Extensions\ReadOnlyMemoryUtils.cs</Link>
+      </Compile>
+      <Compile Include="..\MyTcpSockets\Extensions\ReadWriteSwitcher.cs">
+        <Link>Extensions\ReadWriteSwitcher.cs</Link>
       </Compile>
       <Compile Include="..\MyTcpSockets\Extensions\TcpDataPiece.cs">
         <Link>Extensions\TcpDataPiece.cs</Link>

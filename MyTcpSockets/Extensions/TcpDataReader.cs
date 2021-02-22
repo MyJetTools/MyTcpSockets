@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -28,7 +29,7 @@ namespace MyTcpSockets.Extensions
         
         private readonly TcpDataPiece _readBuffer;
 
-        private readonly object _lockObject = new object();
+        private readonly ReadWriteSwitcher _readWriteSwitcher = new ReadWriteSwitcher();
 
         public TcpDataReader(int readBufferSize)
         {
@@ -37,161 +38,201 @@ namespace MyTcpSockets.Extensions
 
         #region write
 
-        private readonly AwaitingReadBuffer _awaitingReadBuffer = new AwaitingReadBuffer();
-
-        private readonly AwaitingBufferAllocationState _awaitingBufferAllocationState = new AwaitingBufferAllocationState();
-
-
-        public ValueTask<Memory<byte>> AllocateBufferToWriteAsync()
+        
+        public async ValueTask<Memory<byte>> AllocateBufferToWriteAsync(CancellationToken token)
         {
-            lock (_lockObject)
+            while (true)
             {
-                var result = _readBuffer.AllocateBufferToWrite();
-
-                if (result.Length == 0)
-                {
-                    var task = _awaitingBufferAllocationState.AllocateTask();
-                    return new ValueTask<Memory<byte>>(task);
-                }
-  
-                _awaitingBufferAllocationState.SetMemoryIsAllocated(result.Length);
-                return new ValueTask<Memory<byte>>(result);
+                await _readWriteSwitcher.WaitUntilWriteModeIsSetAsync(token);
+                var result =  _readBuffer.AllocateBufferToWrite();
+                if (result.Length > 0)
+                    return result;
+                _readWriteSwitcher.SetToReadMode();
             }
+
         }
 
-        public ValueTask<(byte[] buffer, int start, int len)> AllocateBufferToWriteLegacyAsync()
+        public async ValueTask<(byte[] buffer, int start, int len)> AllocateBufferToWriteLegacyAsync(CancellationToken token)
         {
-            lock (_lockObject)
+            while (true)
             {
+                await _readWriteSwitcher.WaitUntilWriteModeIsSetAsync(token);
                 var result = _readBuffer.AllocateBufferToWriteLegacy();
-
-                if (result.len == 0)
-                {
-                    var task = _awaitingBufferAllocationState.AllocateLegacyTask();
-                    return new ValueTask<(byte[] buffer, int start, int len)>(task);
-                }
-
-                _awaitingBufferAllocationState.SetMemoryIsAllocated(result.len);
-                return new ValueTask<(byte[] buffer, int start, int len)>(result);
+                if (result.len > 0)
+                    return result;
+                _readWriteSwitcher.SetToReadMode();
             }
+
         }
 
         public void CommitWrittenData(int len)
         {
-
-            if (len > _awaitingBufferAllocationState.AllocatedBufferSize)
-                throw new Exception(
-                    $"You are trying to commit grater mem size:{len} than you have allocated earlier: {_awaitingBufferAllocationState.AllocatedBufferSize} ");
-         
-            lock (_lockObject)
-            {
-                _readBuffer.CommitWrittenData(len);
-                _awaitingReadBuffer.NewBytesAppeared(_readBuffer);
-                _readBuffer.Gc();
-            }
-
+            _readBuffer.CommitWrittenData(len);
+            _readWriteSwitcher.SetToReadMode();
         }
+
         #endregion
   
         
-        public ValueTask<byte> ReadAndCommitByteAsync(CancellationToken token)
+        public async ValueTask<byte> ReadAndCommitByteAsync(CancellationToken token)
         {
-            lock (_lockObject)
-            {
+            await _readWriteSwitcher.WaitUntilReadModeIsSetAsync(token);
 
+            while (true)
+            { 
                 if (_readBuffer.ReadyToReadSize > 0)
                 {
-                    var result = CommitByte();
-                    return new ValueTask<byte>(result); 
+                    var result = _readBuffer.ReadByte();
+                    _readBuffer.CommitReadData(1);
+                    return result;
                 }
-
-                return _awaitingReadBuffer.EngageToReadByte();
+                _readWriteSwitcher.SetToWriteMode();
+                await _readWriteSwitcher.WaitUntilReadModeIsSetAsync(token);
             }
+
         }
 
-        public ValueTask<TcpReadResult> ReadAsyncAsync(int size, CancellationToken token)
+        private async ValueTask<ReadOnlyMemory<byte>> ReadAsInternalBufferAsync(int size, CancellationToken token)
         {
-            lock (_lockObject)
+            while (true)
             {
                 var result = _readBuffer.TryRead(size);
-
                 if (result.Length > 0)
-                    return new ValueTask<TcpReadResult>(new TcpReadResult(result, null));
-
-                if (size > _readBuffer.BufferSize)
-                {
-                    var iniMem = _readBuffer.GetWhateverWeHave();
-                    var task = _awaitingReadBuffer.EngageToRead(iniMem, true, size);
-                    _readBuffer.CommitReadData(iniMem.Length);
-                    _awaitingBufferAllocationState.TryToAllocateBufferAgain(_readBuffer);
-                    return task;
-                }
+                    return result;
                 
-                return _awaitingReadBuffer.EngageToRead(null, false, size);      
+                _readWriteSwitcher.SetToWriteMode();
+                await _readWriteSwitcher.WaitUntilReadModeIsSetAsync(token);
             }
+            
         }
-
-        private byte CommitByte()
+        
+        private async ValueTask<byte[]> ReadAsNewByteArrayBufferAsync(int size, CancellationToken token)
         {
-            var result = _readBuffer.ReadByte();
-            _readBuffer.CommitReadData(1);
+            var result = new byte[size];
+            var remainSize = size;
+            var pos = 0;
+            while (remainSize>0)
+            {
+                var buffer = _readBuffer.GetWhateverWeHave();
+                if (buffer.Length == 0)
+                {
+                    _readWriteSwitcher.SetToWriteMode();
+                    await _readWriteSwitcher.WaitUntilReadModeIsSetAsync(token);
+                    buffer = _readBuffer.GetWhateverWeHave();
+                }
+
+                var copySize = buffer.Length > remainSize ? remainSize : buffer.Length;
+                
+                buffer.Slice(0, copySize).CopyTo(result.AsMemory(pos, copySize));
+                _readBuffer.CommitReadData(copySize);
+
+                pos += copySize;
+                remainSize -= copySize;
+            }
+
             return result;
         }
 
-        public void CommitReadData(TcpReadResult tcpReadResult)
+        public async ValueTask<TcpReadResult> ReadAsyncAsync(int size, CancellationToken token)
         {
-            lock (_lockObject)
+            await _readWriteSwitcher.WaitUntilReadModeIsSetAsync(token);
+
+            if (size > _readBuffer.BufferSize)
             {
-                if (tcpReadResult.UncommittedMemory.Length > 0)
-                    _readBuffer.CommitReadData(tcpReadResult.UncommittedMemory.Length);
+                var resultAsArray = await ReadAsNewByteArrayBufferAsync(size, token);
+                return new TcpReadResult(default, resultAsArray);
             }
+
+            var result = await ReadAsInternalBufferAsync(size, token);
+            return  new TcpReadResult(result, null);
         }
 
 
-        public ValueTask<TcpReadResult> ReadWhileWeGetSequenceAsync(byte[] marker, CancellationToken token)
+        public void CommitReadData(TcpReadResult tcpReadResult)
+        {
+            if (tcpReadResult.UncommittedMemory.Length > 0)
+                _readBuffer.CommitReadData(tcpReadResult.UncommittedMemory.Length);
+        }
+
+
+        private async ValueTask<ReadOnlyMemory<byte>> TryReadFromTheBufferAsync(byte[] marker, CancellationToken token)
         {
 
-            lock (_lockObject)
+            while (!_readBuffer.FullOfData)
             {
-
-                if (_readBuffer.ReadyToReadSize == 0)
-                    return _awaitingReadBuffer.EngageSearchByMarker(default, false, marker);
-
                 var size = _readBuffer.GetSizeByMarker(marker);
 
+                if (size > -1)
+                    return _readBuffer.TryRead(size);
+
+                _readWriteSwitcher.SetToWriteMode();
+                await _readWriteSwitcher.WaitUntilReadModeIsSetAsync(token);
+            }
+
+            return default;
+        }
+
+
+        private async ValueTask<byte[]> TryReadAsArrayAsync(byte[] marker, CancellationToken token)
+        {
+            var result = new MemoryStream();
+
+            var chunk = _readBuffer.GetWhateverWeHave();
+            if (chunk.Length > 0)
+            {
+                result.Write(chunk.Span);
+                _readBuffer.CommitReadData(chunk.Length);
+            }
+
+            while (true)
+            {
+                _readWriteSwitcher.SetToWriteMode();
+                await _readWriteSwitcher.WaitUntilReadModeIsSetAsync(token);
+
+                var size = result.GetSizeByMarker(_readBuffer, marker);
 
                 if (size == -1)
                 {
-                    var currentBuffer = _readBuffer.GetWhateverWeHave();
-                    var resultAsTask = _awaitingReadBuffer.EngageSearchByMarker(currentBuffer, true, marker);
-                    _readBuffer.CommitReadData(currentBuffer.Length);
-                    _awaitingBufferAllocationState.TryToAllocateBufferAgain(_readBuffer);
-                    return resultAsTask;
+                    var newChunk = _readBuffer.GetWhateverWeHave();
+                    result.Write(newChunk.Span);
+                    _readBuffer.CommitReadData(newChunk.Length);
+                    continue;
                 }
 
-                var result = _readBuffer.TryRead(size);
-                return new ValueTask<TcpReadResult>(new TcpReadResult(result, null));
+                var remainSize = size - (int) result.Length;
+                var lastChunk = _readBuffer.TryRead(remainSize);
+                result.Write(lastChunk.Span);
+                _readBuffer.CommitReadData(lastChunk.Length);
+                return result.ToArray();
             }
+
+        }
+
+
+        public async ValueTask<TcpReadResult> ReadWhileWeGetSequenceAsync(byte[] marker, CancellationToken token)
+        {
+            await _readWriteSwitcher.WaitUntilReadModeIsSetAsync(token);
+            
+
+            var resultAsMem = await TryReadFromTheBufferAsync(marker, token);
+
+            if (resultAsMem.Length > 0)
+                return new TcpReadResult(resultAsMem, null);
+
+            var resultAsArray = await TryReadAsArrayAsync(marker, token);
+            return new TcpReadResult(default, resultAsArray);
 
         }
 
 
         public void Stop()
         {
-
-            lock (_lockObject)
-            {
-               //ToDo - Implement - how to stop
-            }
-
+            _readWriteSwitcher.Stop();
         }
 
         public override string ToString()
         {
-            lock (_lockObject)
-            {
-                return "Start:" + _readBuffer.ReadyToReadStart + "Len:" + _readBuffer.ReadyToReadSize;
-            }
+            return "Start:" + _readBuffer.ReadyToReadStart + "Len:" + _readBuffer.ReadyToReadSize;
         }
 
 

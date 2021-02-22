@@ -44,8 +44,7 @@ namespace MyTcpSockets.Tests
             var incomingArray1 = new byte[] {1, 2, 3, 4, 5};
             var incomingArray2 = new byte[] {11, 12, 13, 4, 5};
 
-            await trafficReader.NewPackageAsync(incomingArray1);
-            await trafficReader.NewPackageAsync(incomingArray2);
+            var writeTask = trafficReader.NewPackagesAsync(incomingArray1, incomingArray2);
 
             var token = new CancellationTokenSource();
             var data = await trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{5, 11}, token.Token);
@@ -55,6 +54,8 @@ namespace MyTcpSockets.Tests
             data = await trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, token.Token);
             new ReadOnlyMemory<byte>(new byte[] {12, 13, 4, 5}).ArrayIsEqualWith(data.AsArray());
             trafficReader.CommitReadData(data);
+
+            await writeTask;
         }  
         
         [Test]
@@ -65,8 +66,7 @@ namespace MyTcpSockets.Tests
             var incomingArray1 = new byte[] {1, 2, 3, 4, 5};
             var incomingArray2 = new byte[] {11, 12, 13, 4, 5};
 
-            await trafficReader.NewPackageAsync(incomingArray1);
-            await trafficReader.NewPackageAsync(incomingArray2);
+            var writeTask = trafficReader.NewPackagesAsync(incomingArray1, incomingArray2);
 
             var token = new CancellationTokenSource();
             var data = await trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, token.Token);
@@ -76,6 +76,8 @@ namespace MyTcpSockets.Tests
             data = await trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, token.Token);
             new ReadOnlyMemory<byte>(new byte[] {11, 12, 13, 4, 5}).ArrayIsEqualWith(data.AsArray());
             trafficReader.CommitReadData(data);
+
+            await writeTask;
         }  
         
         
@@ -87,8 +89,9 @@ namespace MyTcpSockets.Tests
             var token = new CancellationTokenSource();
             var dataTask = trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{5, 11}, token.Token);
 
-            await trafficReader.NewPackageAsync(new byte[] {1, 2, 3, 4, 5});
-            await trafficReader.NewPackageAsync(new byte[] {11, 12, 13, 4, 5});
+            var writeTask = trafficReader.NewPackagesAsync(
+                new byte[] {1, 2, 3, 4, 5},
+                new byte[] {11, 12, 13, 4, 5});
             
             var data = await dataTask;
             new ReadOnlyMemory<byte>(new byte[] {1, 2, 3, 4, 5, 11}).ArrayIsEqualWith(data.AsArray());
@@ -97,21 +100,23 @@ namespace MyTcpSockets.Tests
             data = await trafficReader.ReadWhileWeGetSequenceAsync(new byte[]{4, 5}, token.Token);
             new ReadOnlyMemory<byte>(new byte[] {12, 13, 4, 5}).ArrayIsEqualWith(data.AsArray());
             trafficReader.CommitReadData(data);
+
+            await writeTask;
         }
 
 
         [Test]
         public async Task TestFindingSequenceWithTwoAsOnePieceAndOtherComplete()
         {
-
             var trafficReader = new TcpDataReader(1024);
 
             var token = new CancellationTokenSource();
             var dataTask = trafficReader.ReadWhileWeGetSequenceAsync(new byte[] {14, 15}, token.Token);
 
-            await trafficReader.NewPackageAsync(new byte[] {1, 2, 3, 4, 5});
-            await trafficReader.NewPackageAsync(new byte[] {11, 12, 13, 14, 15});
-            await trafficReader.NewPackageAsync(new byte[] {21, 22, 23, 14, 15});
+            var writeTask =  trafficReader.NewPackagesAsync(
+                new byte[] {1, 2, 3, 4, 5},
+                new byte[] {11, 12, 13, 14, 15},
+                new byte[] {21, 22, 23, 14, 15});
             
             var data = await dataTask;
             new ReadOnlyMemory<byte>(new byte[] {1, 2, 3, 4, 5, 11, 12, 13, 14, 15}).ArrayIsEqualWith(data.AsArray());
@@ -120,7 +125,10 @@ namespace MyTcpSockets.Tests
             data = await trafficReader.ReadWhileWeGetSequenceAsync(new byte[] {14, 15}, token.Token);
             new ReadOnlyMemory<byte>(new byte[] {21, 22, 23, 14, 15}).ArrayIsEqualWith(data.AsArray());
             trafficReader.CommitReadData(data);
+
+            await writeTask;
         }
+        
 
     }
 

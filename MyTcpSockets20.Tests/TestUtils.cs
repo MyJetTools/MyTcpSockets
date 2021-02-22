@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using MyTcpSockets.Extensions;
 using NUnit.Framework;
@@ -38,7 +39,8 @@ namespace MyTcpSockets.Tests
 
             while (remainSize>0)
             {
-                var buf = await tcpDataReader.AllocateBufferToWriteAsync();
+                var cancellationToken = new CancellationTokenSource();
+                var buf = await tcpDataReader.AllocateBufferToWriteAsync(cancellationToken.Token);
 
                 var copySize = buf.Length < remainSize ? buf.Length : remainSize;
                 
