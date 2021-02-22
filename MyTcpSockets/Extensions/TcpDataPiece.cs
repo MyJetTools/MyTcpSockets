@@ -60,6 +60,9 @@ namespace MyTcpSockets.Extensions
         public (byte[] buffer, int start, int len) AllocateBufferToWriteLegacy()
         {
             var writeSize = WriteSize;
+            
+            AllocatedToWrite += writeSize;
+            
             return writeSize == 0 
                 ? (_data, 0,0) 
                 : (_data, WriteIndex, writeSize);
@@ -68,7 +71,7 @@ namespace MyTcpSockets.Extensions
         public void CommitWrittenData(int size)
         {
             ReadyToReadSize += size;
-            AllocatedToWrite -= size;
+            AllocatedToWrite = 0;
         }
 
         public ReadOnlyMemory<byte> TryRead(int size)
