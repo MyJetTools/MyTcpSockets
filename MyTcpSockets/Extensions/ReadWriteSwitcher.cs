@@ -63,7 +63,6 @@ namespace MyTcpSockets.Extensions
 
                 var result = _readModeAwaiter;
                 _readModeAwaiter = null;
-                Console.WriteLine($"Starting read Task. Thread is: {Thread.CurrentThread.ManagedThreadId}");
                 result.SetResult(0);
             }
         }
