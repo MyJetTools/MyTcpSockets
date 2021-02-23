@@ -8,7 +8,7 @@ namespace MyTcpSockets.Extensions
     {
         private readonly LinkedList<ReadOnlyMemory<byte>> _queue = new LinkedList<ReadOnlyMemory<byte>>();
 
-        private TaskCompletionSource<ReadOnlyMemory<byte>> _awaitingTask;
+        private Task<ReadOnlyMemory<byte>> _awaitingTask;
         private byte[] _buffer;
 
         private readonly object _lockObject;
@@ -16,14 +16,23 @@ namespace MyTcpSockets.Extensions
         {
             _lockObject = lockObject;
         }
+
+
+        private ReadOnlyMemory<byte> _bytesToYield;
+        private ReadOnlyMemory<byte> TaskProc()
+        {
+            if (_stopped)
+                throw new Exception("Publisher/Subscriber is stopped");
+            
+            return _bytesToYield;
+        }
+        
         public void Publish(ReadOnlyMemory<byte> itm)
         {
             if (_stopped)
                 return;
 
-
-            TaskCompletionSource<ReadOnlyMemory<byte>> awaitingTask;
-            ReadOnlyMemory<byte> bytesToYield;
+            Task<ReadOnlyMemory<byte>> awaitingTask;
             
             lock (_lockObject)
             {
@@ -32,12 +41,12 @@ namespace MyTcpSockets.Extensions
                 if (_awaitingTask == null)
                     return;
                 
-                bytesToYield = _queue.CompileAndCopyAndDispose(_buffer);
+                _bytesToYield = _queue.CompileAndCopyAndDispose(_buffer);
                 awaitingTask = _awaitingTask;
                 _awaitingTask = null;
             }
 
-            awaitingTask?.SetResult(bytesToYield);
+            awaitingTask?.Start();
         }
 
         private bool _stopped;
@@ -51,8 +60,9 @@ namespace MyTcpSockets.Extensions
                     return new ValueTask<ReadOnlyMemory<byte>>(result);
 
                 _buffer = deliveryBuffer;
-                _awaitingTask = new TaskCompletionSource<ReadOnlyMemory<byte>>();
-                return new ValueTask<ReadOnlyMemory<byte>>(_awaitingTask.Task);
+                _awaitingTask = new Task<ReadOnlyMemory<byte>>(TaskProc);
+                
+                return new ValueTask<ReadOnlyMemory<byte>>(_awaitingTask);
             }
         }
 
@@ -62,7 +72,7 @@ namespace MyTcpSockets.Extensions
             {
                 _stopped = true;
                 _queue.Clear();
-                _awaitingTask?.SetException(new Exception("PublisherSubscriber is stopped"));
+                _awaitingTask?.Start();
                 _awaitingTask = null;
             }
         }

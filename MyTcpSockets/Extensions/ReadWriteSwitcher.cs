@@ -15,11 +15,17 @@ namespace MyTcpSockets.Extensions
 
         private readonly object _lockObject = new object();
 
-        private TaskCompletionSource<int> _writeModeAwaiter;
+        private Task _writeModeAwaiter;
+
+        private void TaskProcess()
+        {
+            if (_mode == TcpReaderSwitchMode.Stopped)
+                throw new Exception("Service is stopping");
+        }
         
         public ValueTask WaitUntilWriteModeIsSetAsync(CancellationToken token)
         {
-            
+
             if (_mode == TcpReaderSwitchMode.Stopped)
                 throw new Exception("Service is stopping");
             
@@ -29,10 +35,10 @@ namespace MyTcpSockets.Extensions
                     return new ValueTask();
                 
                 if (_writeModeAwaiter != null)
-                    return new ValueTask(_writeModeAwaiter.Task);
+                    return new ValueTask(_writeModeAwaiter);
 
-                _writeModeAwaiter = new TaskCompletionSource<int>(token);
-                return new ValueTask(_writeModeAwaiter.Task);
+                _writeModeAwaiter = new Task(TaskProcess, token);
+                return new ValueTask(_writeModeAwaiter);
             }
         }
 
@@ -53,12 +59,12 @@ namespace MyTcpSockets.Extensions
 
                 var result = _readModeAwaiter;
                 _readModeAwaiter = null;
-                result.SetResult(0);
+                result.Start();
             }
         }
 
 
-        private TaskCompletionSource<int> _readModeAwaiter;
+        private Task _readModeAwaiter;
         public ValueTask WaitUntilReadModeIsSetAsync(CancellationToken token)
         {
             if (_mode == TcpReaderSwitchMode.Stopped)
@@ -70,13 +76,14 @@ namespace MyTcpSockets.Extensions
                     return new ValueTask();
 
                 if (_readModeAwaiter != null)
-                    return new ValueTask(_readModeAwaiter.Task);
+                    return new ValueTask(_readModeAwaiter);
 
-                _readModeAwaiter = new TaskCompletionSource<int>(token);
-                return new ValueTask(_readModeAwaiter.Task);
+                _readModeAwaiter = new Task(TaskProcess, token);
+                return new ValueTask(_readModeAwaiter);
             }
         }
         
+        NotCompile
         public void SetToWriteMode()
         {
             if (_mode == TcpReaderSwitchMode.Stopped)
@@ -95,7 +102,7 @@ namespace MyTcpSockets.Extensions
 
                 var result = _writeModeAwaiter;
                 _writeModeAwaiter = null;
-                result.SetResult(0);
+                result.Start();
             }
         }
 
@@ -108,17 +115,18 @@ namespace MyTcpSockets.Extensions
                 {
                     var readModeAwaiter = _readModeAwaiter;
                     _readModeAwaiter = null;
-                    readModeAwaiter.SetException(new Exception("Service is stopping"));
+                    readModeAwaiter.Start();
                 }
                 
                 if (_writeModeAwaiter != null)
                 {
                     var writeModeAwaiter = _writeModeAwaiter;
                     _writeModeAwaiter = null;
-                    writeModeAwaiter.SetException(new Exception("Service is stopping"));
+                    writeModeAwaiter.Start();
                 }
             }
         }
 
     }
+    
 }
