@@ -9,17 +9,11 @@ namespace MyTcpSockets.Extensions
 
         public int ReadyToReadStart { get; private set; }
         public int ReadyToReadSize { get; private set; }
-
         public int WriteIndex => ReadyToReadStart + ReadyToReadSize;
-
         public int WriteSize => _data.Length - WriteIndex;
-        
         public int AllocatedToWrite { get; private set; }
         public int AllocatedToRead { get; private set; }
-
-
         public bool FullOfData => ReadyToReadSize == _data.Length;
-
         internal IEnumerable<byte> Iterate()
         {
             for (var i = ReadyToReadStart; i < ReadyToReadStart + ReadyToReadSize; i++)
@@ -27,7 +21,6 @@ namespace MyTcpSockets.Extensions
                 yield return _data[i];
             }
         }
-        
         public TcpDataPiece(int bufferSize)
         {
             _data = new byte[bufferSize];
@@ -36,7 +29,7 @@ namespace MyTcpSockets.Extensions
         public int BufferSize => _data.Length;
 
 
-        internal void Gc()
+        private void Gc()
         {
             if (AllocatedToWrite >0)
                 return;
@@ -53,19 +46,17 @@ namespace MyTcpSockets.Extensions
 
         public Memory<byte> AllocateBufferToWrite()
         {
-            Gc();
-            
-            var writeSize = WriteSize;
+            var (buffer, start, len) = AllocateBufferToWriteLegacy();
 
-            AllocatedToWrite += writeSize;
-            
-            return writeSize == 0 ? null 
-                : new Memory<byte>(_data, WriteIndex, writeSize);
+            return len == 0 
+                ? default 
+                : new Memory<byte>(buffer, start, len);
         }
 
         public (byte[] buffer, int start, int len) AllocateBufferToWriteLegacy()
         {
-            Gc();
+            if (WriteSize < BufferSize * 0.5)
+                Gc();
             
             var writeSize = WriteSize;
             
@@ -87,7 +78,6 @@ namespace MyTcpSockets.Extensions
 
         public ReadOnlyMemory<byte> TryRead(int size)
         {
-            Gc();
             AllocatedToRead = ReadyToReadSize < size ? 0 : size;
             
             return  AllocatedToRead == 0
@@ -98,7 +88,7 @@ namespace MyTcpSockets.Extensions
 
         public ReadOnlyMemory<byte> GetWhateverWeHave()
         {
-            Gc();
+
             AllocatedToRead = ReadyToReadSize;
             
             return AllocatedToRead == 0
@@ -128,7 +118,8 @@ namespace MyTcpSockets.Extensions
             ReadyToReadSize -= size;
 
             if (ReadyToReadSize == 0 && AllocatedToWrite == 0)
-                ReadyToReadSize = 0;
+                ReadyToReadStart = 0;
+
             
         }
 

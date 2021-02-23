@@ -15,7 +15,7 @@ namespace MyTcpSockets.Extensions
 
         private readonly object _lockObject = new object();
 
-        private Task _writeModeAwaiter;
+        private TaskCompletionSource<int> _writeModeAwaiter;
 
         private void TaskProcess()
         {
@@ -39,10 +39,10 @@ namespace MyTcpSockets.Extensions
                     return new ValueTask();
                 
                 if (_writeModeAwaiter != null)
-                    return new ValueTask(_writeModeAwaiter);
+                    return new ValueTask(_writeModeAwaiter.Task);
 
-                _writeModeAwaiter = new Task(TaskProcess, token);
-                return new ValueTask(_writeModeAwaiter);
+                _writeModeAwaiter = new TaskCompletionSource<int>(token);
+                return new ValueTask(_writeModeAwaiter.Task);
             }
         }
 
@@ -64,12 +64,12 @@ namespace MyTcpSockets.Extensions
                 var result = _readModeAwaiter;
                 _readModeAwaiter = null;
                 Console.WriteLine($"Starting read Task. Thread is: {Thread.CurrentThread.ManagedThreadId}");
-                result.Start();
+                result.SetResult(0);
             }
         }
 
 
-        private Task _readModeAwaiter;
+        private TaskCompletionSource<int> _readModeAwaiter;
         public ValueTask WaitUntilReadModeIsSetAsync(CancellationToken token)
         {
             if (_mode == TcpReaderSwitchMode.Stopped)
@@ -81,10 +81,10 @@ namespace MyTcpSockets.Extensions
                     return new ValueTask();
 
                 if (_readModeAwaiter != null)
-                    return new ValueTask(_readModeAwaiter);
+                    return new ValueTask(_readModeAwaiter.Task);
 
-                _readModeAwaiter = new Task(TaskProcess, token);
-                return new ValueTask(_readModeAwaiter);
+                _readModeAwaiter = new TaskCompletionSource<int>(token);
+                return new ValueTask(_readModeAwaiter.Task);
             }
         }
         
@@ -107,7 +107,7 @@ namespace MyTcpSockets.Extensions
 
                 var result = _writeModeAwaiter;
                 _writeModeAwaiter = null;
-                result.Start();
+                result.SetResult(0);
             }
         }
 
@@ -120,14 +120,14 @@ namespace MyTcpSockets.Extensions
                 {
                     var readModeAwaiter = _readModeAwaiter;
                     _readModeAwaiter = null;
-                    readModeAwaiter.Start();
+                    readModeAwaiter.SetException(new Exception("We are stopping"));
                 }
                 
                 if (_writeModeAwaiter != null)
                 {
                     var writeModeAwaiter = _writeModeAwaiter;
                     _writeModeAwaiter = null;
-                    writeModeAwaiter.Start();
+                    writeModeAwaiter.SetException(new Exception("We are stopping"));
                 }
             }
         }

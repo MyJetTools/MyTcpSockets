@@ -12,11 +12,11 @@ namespace MyTcpSockets.Tests
     {
         public static ReadOnlyMemory<T> AsReadOnlyMemory<T>(this IEnumerable<T> mem)
         {
-            return new ReadOnlyMemory<T>(mem.ToArray());
+            return new (mem.ToArray());
         }
         public static ReadOnlyMemory<T> AsReadOnlyMemory<T>(this IEnumerable<T> mem, int from, int size)
         {
-            return new ReadOnlyMemory<T>(mem.Skip(from).Take(size).ToArray());
+            return new (mem.Skip(from).Take(size).ToArray());
         }
         
         public static void ArraysAreEqual(this byte[] from, ReadOnlyMemory<byte> to)

@@ -16,12 +16,8 @@ namespace MyTcpSockets.Extensions
         ValueTask<byte> ReadAndCommitByteAsync(CancellationToken token);
         ValueTask<TcpReadResult> ReadAsyncAsync(int size, CancellationToken token);
         void CommitReadData(TcpReadResult tcpReadResult);
-
         ValueTask<TcpReadResult> ReadWhileWeGetSequenceAsync(byte[] marker, CancellationToken token);
-
     }
-
-
 
 
     public class TcpDataReader : ITcpDataReader
@@ -37,7 +33,6 @@ namespace MyTcpSockets.Extensions
         }
 
         #region write
-
         
         public async ValueTask<Memory<byte>> AllocateBufferToWriteAsync(CancellationToken token)
         {
@@ -72,8 +67,8 @@ namespace MyTcpSockets.Extensions
         }
 
         #endregion
-  
-        
+
+        #region read
         public async ValueTask<byte> ReadAndCommitByteAsync(CancellationToken token)
         {
             await _readWriteSwitcher.WaitUntilReadModeIsSetAsync(token);
@@ -224,6 +219,7 @@ namespace MyTcpSockets.Extensions
 
         }
 
+        #endregion
 
         public void Stop()
         {
