@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using MyTcpSockets.Extensions;
@@ -20,11 +21,13 @@ namespace MyTcpSockets.Tests
         [Test]
         public async Task TestBasicFeature()
         {
+            var sw = new Stopwatch();
+            sw.Start();
             var trafficReader = new TcpDataReader(1024);
 
             var incomingArray = new byte[] {1, 2, 3, 4, 5, 6};
 
-            await trafficReader.NewPackageAsync(incomingArray);
+            var task = trafficReader.NewPackageAsync(incomingArray);
 
             var token = new CancellationTokenSource();
             var data = await trafficReader.ReadAsyncAsync(3, token.Token);
@@ -35,7 +38,12 @@ namespace MyTcpSockets.Tests
             data = trafficReader.ReadAsyncAsync(2, token.Token).Result;
             TestExtensions.AsReadOnlyMemory(incomingArray, 3, 2).ArrayIsEqualWith(data.AsArray());
             trafficReader.CommitReadData(data);
+
+            await task;
             
+            sw.Stop();
+            Console.WriteLine(sw.Elapsed);
+
         }
 
         [Test]

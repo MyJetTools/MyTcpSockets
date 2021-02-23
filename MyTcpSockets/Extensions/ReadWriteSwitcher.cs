@@ -19,6 +19,10 @@ namespace MyTcpSockets.Extensions
 
         private void TaskProcess()
         {
+            if (_mode == TcpReaderSwitchMode.Read)
+            {
+                Console.WriteLine($"Read is in thead: {Thread.CurrentThread.ManagedThreadId}");
+            }
             if (_mode == TcpReaderSwitchMode.Stopped)
                 throw new Exception("Service is stopping");
         }
@@ -59,6 +63,7 @@ namespace MyTcpSockets.Extensions
 
                 var result = _readModeAwaiter;
                 _readModeAwaiter = null;
+                Console.WriteLine($"Starting read Task. Thread is: {Thread.CurrentThread.ManagedThreadId}");
                 result.Start();
             }
         }
@@ -83,7 +88,7 @@ namespace MyTcpSockets.Extensions
             }
         }
         
-        NotCompile
+
         public void SetToWriteMode()
         {
             if (_mode == TcpReaderSwitchMode.Stopped)
