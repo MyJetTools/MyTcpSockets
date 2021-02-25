@@ -61,6 +61,9 @@
       <Compile Include="..\MyTcpSockets\ServerSocketUtils.cs">
         <Link>ServerSocketUtils.cs</Link>
       </Compile>
+      <Compile Include="..\MyTcpSockets\SocketLog.cs">
+        <Link>SocketLog.cs</Link>
+      </Compile>
       <Compile Include="..\MyTcpSockets\SocketMemoryUtils.cs">
         <Link>SocketMemoryUtils.cs</Link>
       </Compile>

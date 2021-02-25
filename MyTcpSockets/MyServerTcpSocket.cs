@@ -14,7 +14,8 @@ namespace MyTcpSockets
         private readonly Connections<TSocketData>_connections;
         private readonly IPEndPoint _ipEndPoint;
         private readonly int _sendBufferSize;
-        private Action<ITcpContext, object> _log;
+        private readonly ISocketLogInvoker _log;
+        public readonly SocketLog<MyServerTcpSocket<TSocketData>> Logs;
 
         public TimeSpan ReceiveDataTimeoutToKill { get; private set; } = TimeSpan.FromMinutes(1);
         
@@ -28,7 +29,7 @@ namespace MyTcpSockets
 
         private int _readBufferSize = 1024 * 1024 * 2;
 
-        public MyServerTcpSocket(IPEndPoint ipEndPoint, int sendBufferSize = 2048*2048)
+        public MyServerTcpSocket(IPEndPoint ipEndPoint, int sendBufferSize = 1024*1024)
         {
             if (sendBufferSize < 1024)
                 throw new Exception("Buffer size must be more then 1024. Now size:" + sendBufferSize);
@@ -36,6 +37,9 @@ namespace MyTcpSockets
             _ipEndPoint = ipEndPoint;
             _sendBufferSize = sendBufferSize;
             _connections = new Connections<TSocketData>();
+
+            Logs = new SocketLog<MyServerTcpSocket<TSocketData>>(this);
+            _log = Logs;
         }
 
         public MyServerTcpSocket<TSocketData> SetReadBufferSize(int readBufferSize)
@@ -43,12 +47,6 @@ namespace MyTcpSockets
             _readBufferSize = readBufferSize;
             return this;
         }
-
-        public MyServerTcpSocket<TSocketData> AddLog(Action<ITcpContext, object> log)
-        {
-            _log = log;
-            return this;
-        } 
 
         private Func<ITcpSerializer<TSocketData>> _getSerializer;
         
@@ -97,12 +95,12 @@ namespace MyTcpSockets
                         if (!connection.IsServerSocketDead(now, ReceiveDataTimeoutToKill, InitTimeoutToKill)) 
                             continue;
                         
-                        _log.Invoke(connection, $"Found dead connection {connection.ContextName} with ID {connection.Id}. Disconnecting...");
+                        _log.InvokeInfoLog(connection, $"Found dead connection {connection.ContextName} with ID {connection.Id}. Disconnecting...");
                         connection.Disconnect();
                     }
                     catch (Exception e)
                     {
-                        _log.Invoke(connection, e);
+                        _log.InvokeExceptionLog(connection, e);
                     }
                     
                 }
@@ -120,7 +118,7 @@ namespace MyTcpSockets
             await tcpContext.StartAsync(acceptedSocket, _getSerializer(), _lockObject, _log,
                 socket => { _connections.RemoveSocket(socket.Id); }, bufferToSend);
 
-            _log?.Invoke(tcpContext,
+            _log.InvokeInfoLog(tcpContext,
                 $"Socket Accepted; Ip:{acceptedSocket.Client.RemoteEndPoint}. Id=" + tcpContext.Id);
 
             tcpContext.StartReadThread(_readBufferSize);
@@ -132,7 +130,7 @@ namespace MyTcpSockets
             _serverSocket = new TcpListener(_ipEndPoint);
             _serverSocket.Start();
             
-            _log?.Invoke(null, "Started listening tcp socket: " + _ipEndPoint.Port);
+            _log.InvokeInfoLog(null, "Started listening tcp socket: " + _ipEndPoint.Port);
             var socketId = 0;
 
 
@@ -156,7 +154,7 @@ namespace MyTcpSockets
                 }
                 catch (Exception ex)
                 {
-                    _log?.Invoke(null, "Error accepting socket: " + ex.Message);
+                    _log.InvokeInfoLog(null, "Error accepting socket: " + ex.Message);
                 }
             }
 

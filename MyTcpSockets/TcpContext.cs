@@ -51,7 +51,7 @@ namespace MyTcpSockets
                 }
                 catch (Exception e)
                 {
-                    WriteLog("SocketStream._disconnectedCallback() "+e);
+                    _log.InvokeExceptionLog(this, e);
                 }
             }
             
@@ -64,7 +64,7 @@ namespace MyTcpSockets
                 Connected = false;
 
             }
-            WriteLog($"Socket {ContextName} is Disconnected with Ip:{TcpClient.Client.RemoteEndPoint}. Id=" + Id);
+            _log.InvokeInfoLog(this, $"Socket {ContextName} is Disconnected with Ip:{TcpClient.Client.RemoteEndPoint}. Id=" + Id);
 
             try
             {
@@ -72,7 +72,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                WriteLog(" _cancellationToken.Cancel(): "+e);
+                _log.InvokeExceptionLog(this, e);
             }
             
             try
@@ -82,7 +82,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                WriteLog("SocketStatistic Disconnect: "+e);
+                _log.InvokeExceptionLog(this, e);
             }
             
             try
@@ -91,7 +91,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                WriteLog("SocketStream.Close(): "+e);
+                _log.InvokeExceptionLog(this, e);
             }     
             
             try
@@ -100,7 +100,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                WriteLog("TcpClient.Close(): "+e);
+                _log.InvokeExceptionLog(this, e);
             }
             
             try
@@ -109,7 +109,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                WriteLog("_asyncLock.Dispose(): "+e);
+                _log.InvokeExceptionLog(this, e);
             }
             
             
@@ -124,7 +124,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                WriteLog(e);
+                _log.InvokeExceptionLog(this, e);
             }
         }
         #endregion
@@ -177,11 +177,11 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                WriteLog(e);
+                _log.InvokeExceptionLog(this, e);
             }
             finally
             {
-                WriteLog("Disconnected from Traffic Reader Loop");
+                _log.InvokeInfoLog(this, "Disconnected from Traffic Reader Loop");
                 trafficReader.Stop();
             }
 
@@ -207,21 +207,21 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                _log.InvokeExceptionLog(this, e);
             }
             finally
             {
-                WriteLog("Disconnected from ReadLoopAsync");
+                _log.InvokeInfoLog(this, "Disconnected from ReadLoopAsync");
                 Disconnect();
             }
         }
 
-        protected Task ReadLoopTask { get; private set; }
-        protected Task SendTrafficTask { get; private set; }
+        private Task _readLoopTask;
+        private Task _sendTrafficTask;
         internal void StartReadThread(int bufferSize)
         {
-            ReadLoopTask = ReadLoopAsync(bufferSize);
-            SendTrafficTask = StartSendDeliveryTaskAsync();
+            _readLoopTask = ReadLoopAsync(bufferSize);
+            _sendTrafficTask = StartSendDeliveryTaskAsync();
         }
         #endregion
 
@@ -255,8 +255,7 @@ namespace MyTcpSockets
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
-                    _log?.Invoke(this, e);
-
+                    _log.InvokeExceptionLog(this, e);
                     Disconnect();
                     break;
                 }
@@ -285,7 +284,7 @@ namespace MyTcpSockets
         {
             ContextName = contextName;
             Inited = true;
-            WriteLog($"Changed context name to: {contextName} for socket id: {Id} with ip: {TcpClient?.Client.RemoteEndPoint}");
+            _log.InvokeInfoLog(this, $"Changed context name to: {contextName} for socket id: {Id} with ip: {TcpClient?.Client.RemoteEndPoint}");
         }
 
         public SocketStatistic SocketStatistic { get; private set; }
@@ -293,23 +292,9 @@ namespace MyTcpSockets
         public bool Connected { get; private set; }
         public bool Inited { get; private set; }
 
+        private ISocketLogInvoker _log;
 
-        private Action<ITcpContext, object> _log;
-
-        protected void WriteLog(object data)
-        {
-            try
-            {
-                _log?.Invoke(this, data);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-        
-        }
-
-        internal ValueTask StartAsync(TcpClient tcpClient, ITcpSerializer<TSocketData> tcpSerializer, object lockObject, Action<ITcpContext, object> log, 
+        internal ValueTask StartAsync(TcpClient tcpClient, ITcpSerializer<TSocketData> tcpSerializer, object lockObject, ISocketLogInvoker log, 
             Action<ITcpContext> disconnectedCallback, byte[] deliveryBuffer)
         {
             _disconnectedCallback = disconnectedCallback;

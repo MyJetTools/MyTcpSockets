@@ -18,7 +18,9 @@ namespace MyTcpSockets
 
         private readonly object _lockObject = new object();
 
-        private Action<ITcpContext, object> _log;
+
+        private readonly ISocketLogInvoker _log;
+        public readonly SocketLog<MyClientTcpSocket<TSocketData>> Logs;
 
         public TimeSpan PingInterval { get; private set; }
 
@@ -34,21 +36,16 @@ namespace MyTcpSockets
             _readBufferSize = readBufferSize;
             return this;
         }
-        
-        
-        public MyClientTcpSocket(Func<string> getHostPort, TimeSpan reconnectTimeOut, int sendBufferSize = 1024*1024)
+
+
+        public MyClientTcpSocket(Func<string> getHostPort, TimeSpan reconnectTimeOut, int sendBufferSize = 1024 * 1024)
         {
+            Logs = new SocketLog<MyClientTcpSocket<TSocketData>>(this);
+            _log = Logs;
             _getHostPort = getHostPort;
             _reconnectTimeOut = reconnectTimeOut;
             SetPingInterval(TimeSpan.FromSeconds(3));
-
             _deliveryBuffer = new byte[sendBufferSize];
-        }
-
-        public MyClientTcpSocket<TSocketData> AddLog(Action<ITcpContext, object> log)
-        {
-            _log = log;
-            return this;
         }
 
         public MyClientTcpSocket<TSocketData> RegisterTcpContextFactory(
@@ -78,7 +75,9 @@ namespace MyTcpSockets
 
         private async Task<ClientTcpContext<TSocketData>> ConnectAsync(IPEndPoint ipEndPoint, long socketId)
         {
-            _log?.Invoke(null, "Attempt To Connect:" + ipEndPoint.Address + ":" + ipEndPoint.Port);
+            
+            
+            _log.InvokeInfoLog(null, "Attempt To Connect:" + ipEndPoint.Address + ":" + ipEndPoint.Port);
 
             var tcpClient = new TcpClient();
             await tcpClient.ConnectAsync(ipEndPoint.Address, ipEndPoint.Port);
@@ -93,7 +92,7 @@ namespace MyTcpSockets
                 null, 
                 _deliveryBuffer);
 
-            _log?.Invoke(clientTcpContext, "Connected. Id=" + clientTcpContext.Id);
+            _log.InvokeInfoLog(clientTcpContext, "Connected. Id=" + clientTcpContext.Id);
 
             return clientTcpContext;
 
@@ -114,7 +113,7 @@ namespace MyTcpSockets
                 {
                     var message = "Long time [" + receiveInterval +
                                   "] no received activity. Disconnecting socket " + connection.ContextName;
-                    _log?.Invoke(connection, message);
+                    _log.InvokeInfoLog(connection, message);
                     
                     return;
                 }
@@ -154,8 +153,8 @@ namespace MyTcpSockets
                     }
                     catch (Exception ex)
                     {
-                        _log?.Invoke(CurrentTcpContext, "Connection support exception:" + ex.Message);
-                        _log?.Invoke(CurrentTcpContext, ex);
+                        _log.InvokeInfoLog(CurrentTcpContext, "Connection support exception:" + ex.Message);
+
                     }
                     finally
                     {
@@ -164,7 +163,7 @@ namespace MyTcpSockets
                     }
                 }
 
-                _log?.Invoke(null, "Making reconnection timeout: "+_reconnectTimeOut.ToString("g"));
+                _log.InvokeInfoLog(null, "Making reconnection timeout: "+_reconnectTimeOut.ToString("g"));
                 await Task.Delay(_reconnectTimeOut);
             }
             
