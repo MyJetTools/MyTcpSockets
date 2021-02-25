@@ -289,6 +289,7 @@ namespace MyTcpSockets
         internal ValueTask StartAsync(TcpClient tcpClient, ITcpSerializer<TSocketData> tcpSerializer, object lockObject, ISocketLogInvoker log, 
             Action<ITcpContext> disconnectedCallback, byte[] deliveryBuffer)
         {
+            Log = log;
             _disconnectedCallback = disconnectedCallback;
             _lockObject = lockObject;
             _deliveryBuffer = deliveryBuffer;
@@ -297,7 +298,6 @@ namespace MyTcpSockets
             SocketStream = TcpClient.GetStream();
             TcpSerializer = tcpSerializer;
             SetContextName(TcpClient.Client.RemoteEndPoint.ToString());
-            Log = log;
             Connected = true;
             SocketStatistic = new SocketStatistic();
             return OnConnectAsync();
