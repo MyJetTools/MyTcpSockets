@@ -29,7 +29,7 @@ namespace MyTcpSockets
         }
         
         private readonly List<Action<ITcpContext?, Exception>> _logException = new List<Action<ITcpContext?, Exception>>();
-        private T AddLogException(Action<ITcpContext?, Exception> logException)
+        public T AddLogException(Action<ITcpContext?, Exception> logException)
         {
             _logException.Add(logException);
             return _masterObject;
