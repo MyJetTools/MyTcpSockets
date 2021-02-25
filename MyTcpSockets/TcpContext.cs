@@ -11,12 +11,10 @@ namespace MyTcpSockets
    public interface ITcpContext
     {
         SocketStatistic SocketStatistic { get; }
-        
         long Id { get; }
-        
-        
         bool Inited { get; }
-
+        string ContextName { get; }
+        TcpClient TcpClient { get; } 
     }
     
     
@@ -24,7 +22,6 @@ namespace MyTcpSockets
     {
 
         private object _lockObject;
-        
         public TcpClient TcpClient { get; protected set; }
         public Stream SocketStream { get; private set; }
         
@@ -51,7 +48,7 @@ namespace MyTcpSockets
                 }
                 catch (Exception e)
                 {
-                    _log.InvokeExceptionLog(this, e);
+                    Log.InvokeExceptionLog(this, e);
                 }
             }
             
@@ -64,7 +61,7 @@ namespace MyTcpSockets
                 Connected = false;
 
             }
-            _log.InvokeInfoLog(this, $"Socket {ContextName} is Disconnected with Ip:{TcpClient.Client.RemoteEndPoint}. Id=" + Id);
+            Log.InvokeInfoLog(this, $"Socket {ContextName} is Disconnected with Ip:{TcpClient.Client.RemoteEndPoint}. Id=" + Id);
 
             try
             {
@@ -72,7 +69,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                _log.InvokeExceptionLog(this, e);
+                Log.InvokeExceptionLog(this, e);
             }
             
             try
@@ -82,7 +79,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                _log.InvokeExceptionLog(this, e);
+                Log.InvokeExceptionLog(this, e);
             }
             
             try
@@ -91,7 +88,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                _log.InvokeExceptionLog(this, e);
+                Log.InvokeExceptionLog(this, e);
             }     
             
             try
@@ -100,7 +97,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                _log.InvokeExceptionLog(this, e);
+                Log.InvokeExceptionLog(this, e);
             }
             
             try
@@ -109,7 +106,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                _log.InvokeExceptionLog(this, e);
+                Log.InvokeExceptionLog(this, e);
             }
             
             
@@ -124,7 +121,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                _log.InvokeExceptionLog(this, e);
+                Log.InvokeExceptionLog(this, e);
             }
         }
         #endregion
@@ -177,11 +174,11 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                _log.InvokeExceptionLog(this, e);
+                Log.InvokeExceptionLog(this, e);
             }
             finally
             {
-                _log.InvokeInfoLog(this, "Disconnected from Traffic Reader Loop");
+                Log.InvokeInfoLog(this, "Disconnected from Traffic Reader Loop");
                 trafficReader.Stop();
             }
 
@@ -207,21 +204,19 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                _log.InvokeExceptionLog(this, e);
+                Log.InvokeExceptionLog(this, e);
             }
             finally
             {
-                _log.InvokeInfoLog(this, "Disconnected from ReadLoopAsync");
+                Log.InvokeInfoLog(this, "Disconnected from ReadLoopAsync");
                 Disconnect();
             }
         }
 
-        private Task _readLoopTask;
-        private Task _sendTrafficTask;
         internal void StartReadThread(int bufferSize)
         {
-            _readLoopTask = ReadLoopAsync(bufferSize);
-            _sendTrafficTask = StartSendDeliveryTaskAsync();
+            Task.Run(()=>ReadLoopAsync(bufferSize));
+            Task.Run(StartSendDeliveryTaskAsync);
         }
         #endregion
 
@@ -255,14 +250,11 @@ namespace MyTcpSockets
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
-                    _log.InvokeExceptionLog(this, e);
+                    Log.InvokeExceptionLog(this, e);
                     Disconnect();
                     break;
                 }
-
             }
-
-       
         }
 
         public void SendDataToSocket(TSocketData data)
@@ -284,7 +276,7 @@ namespace MyTcpSockets
         {
             ContextName = contextName;
             Inited = true;
-            _log.InvokeInfoLog(this, $"Changed context name to: {contextName} for socket id: {Id} with ip: {TcpClient?.Client.RemoteEndPoint}");
+            Log.InvokeInfoLog(this, $"Changed context name to: {contextName} for socket id: {Id} with ip: {TcpClient?.Client.RemoteEndPoint}");
         }
 
         public SocketStatistic SocketStatistic { get; private set; }
@@ -292,7 +284,7 @@ namespace MyTcpSockets
         public bool Connected { get; private set; }
         public bool Inited { get; private set; }
 
-        private ISocketLogInvoker _log;
+        protected ISocketLogInvoker Log { get; private set; }
 
         internal ValueTask StartAsync(TcpClient tcpClient, ITcpSerializer<TSocketData> tcpSerializer, object lockObject, ISocketLogInvoker log, 
             Action<ITcpContext> disconnectedCallback, byte[] deliveryBuffer)
@@ -305,7 +297,7 @@ namespace MyTcpSockets
             SocketStream = TcpClient.GetStream();
             TcpSerializer = tcpSerializer;
             SetContextName(TcpClient.Client.RemoteEndPoint.ToString());
-            _log = log;
+            Log = log;
             Connected = true;
             SocketStatistic = new SocketStatistic();
             return OnConnectAsync();
@@ -315,7 +307,6 @@ namespace MyTcpSockets
     public abstract class ClientTcpContext<TSocketData> : TcpContext<TSocketData>
     {
         protected abstract TSocketData GetPingPacket();
-
         public async ValueTask SendPingAsync()
         {
             var pingPacket = GetPingPacket();
