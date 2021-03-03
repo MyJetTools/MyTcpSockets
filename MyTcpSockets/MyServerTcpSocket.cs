@@ -100,7 +100,7 @@ namespace MyTcpSockets
                     }
                     catch (Exception e)
                     {
-                        _log.InvokeExceptionLog(connection, e);
+                        _log.InvokeExceptionLog(connection, e, false);
                     }
                     
                 }

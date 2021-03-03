@@ -9,7 +9,7 @@ namespace MyTcpSockets
     public interface ISocketLogInvoker
     {
         void InvokeInfoLog(ITcpContext? ctx, string message);
-        void InvokeExceptionLog(ITcpContext? ctx, Exception ex);
+        void InvokeExceptionLog(ITcpContext? ctx, Exception ex, bool debugLog);
     }
     
     public class SocketLog<T> : ISocketLogInvoker
@@ -19,6 +19,12 @@ namespace MyTcpSockets
         public SocketLog(T masterObject)
         {
             _masterObject = masterObject;
+        }
+
+        public bool DebugLogsAreEnabled { get; private set; }
+        public void EnableDebugLog()
+        {
+            DebugLogsAreEnabled = true;
         }
         
         private readonly List<Action<ITcpContext?, string>> _logInfo = new List<Action<ITcpContext?, string>>();
@@ -61,8 +67,12 @@ namespace MyTcpSockets
             }
         }
 
-        void ISocketLogInvoker.InvokeExceptionLog(ITcpContext? ctx, Exception ex)
+        void ISocketLogInvoker.InvokeExceptionLog(ITcpContext? ctx, Exception ex, bool debugLog)
         {
+            
+            if (debugLog && !DebugLogsAreEnabled)
+                return;
+            
             if (_logInfo.Count == 0)
             {
                 Console.WriteLine(ctx == null

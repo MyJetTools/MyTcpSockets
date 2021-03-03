@@ -16,16 +16,6 @@ namespace MyTcpSockets.Extensions
         private readonly object _lockObject = new object();
 
         private TaskCompletionSource<int> _writeModeAwaiter;
-
-        private void TaskProcess()
-        {
-            if (_mode == TcpReaderSwitchMode.Read)
-            {
-                Console.WriteLine($"Read is in thead: {Thread.CurrentThread.ManagedThreadId}");
-            }
-            if (_mode == TcpReaderSwitchMode.Stopped)
-                throw new Exception("Service is stopping");
-        }
         
         public ValueTask WaitUntilWriteModeIsSetAsync(CancellationToken token)
         {

@@ -48,7 +48,7 @@ namespace MyTcpSockets
                 }
                 catch (Exception e)
                 {
-                    Log.InvokeExceptionLog(this, e);
+                    Log.InvokeExceptionLog(this, e, true);
                 }
             }
             
@@ -69,7 +69,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                Log.InvokeExceptionLog(this, e);
+                Log.InvokeExceptionLog(this, e, true);
             }
             
             try
@@ -79,7 +79,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                Log.InvokeExceptionLog(this, e);
+                Log.InvokeExceptionLog(this, e, true);
             }
             
             try
@@ -88,7 +88,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                Log.InvokeExceptionLog(this, e);
+                Log.InvokeExceptionLog(this, e, true);
             }     
             
             try
@@ -97,7 +97,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                Log.InvokeExceptionLog(this, e);
+                Log.InvokeExceptionLog(this, e, true);
             }
             
             try
@@ -106,7 +106,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                Log.InvokeExceptionLog(this, e);
+                Log.InvokeExceptionLog(this, e, true);
             }
             
             
@@ -121,7 +121,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                Log.InvokeExceptionLog(this, e);
+                Log.InvokeExceptionLog(this, e, true);
             }
         }
         #endregion
@@ -174,7 +174,7 @@ namespace MyTcpSockets
             }
             catch (Exception e)
             {
-                Log.InvokeExceptionLog(this, e);
+                Log.InvokeExceptionLog(this, e, true);
             }
             finally
             {
@@ -195,16 +195,26 @@ namespace MyTcpSockets
 
                 while (TcpClient.Connected)
                 {
-                    var incomingDataPacket =
-                        await TcpSerializer.DeserializeAsync(trafficReader, _cancellationToken.Token);
-                    await HandleIncomingDataAsync(incomingDataPacket);
+                    try
+                    {
+                        var incomingDataPacket =
+                            await TcpSerializer.DeserializeAsync(trafficReader, _cancellationToken.Token);
+                        await HandleIncomingDataAsync(incomingDataPacket);
+                    }
+                    catch (Exception e)
+                    {
+                        Log.InvokeExceptionLog(this, e, false);
+                        Log.InvokeInfoLog(this, "Exception on Deserializing or Handling Data in TCP Context Level. Disconnecting");
+                        break;
+                    }
+        
                 }
 
                 await trafficWriterTask;
             }
             catch (Exception e)
             {
-                Log.InvokeExceptionLog(this, e);
+                Log.InvokeExceptionLog(this, e, true);
             }
             finally
             {
@@ -250,7 +260,7 @@ namespace MyTcpSockets
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
-                    Log.InvokeExceptionLog(this, e);
+                    Log.InvokeExceptionLog(this, e, true);
                     Disconnect();
                     break;
                 }
