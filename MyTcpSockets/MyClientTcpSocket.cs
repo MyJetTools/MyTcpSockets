@@ -153,7 +153,7 @@ namespace MyTcpSockets
                     }
                     catch (Exception ex)
                     {
-                        _log.InvokeInfoLog(CurrentTcpContext, "Connection support exception:" + ex.Message);
+                        _log.InvokeExceptionLog(CurrentTcpContext, ex, true);
 
                     }
                     finally
