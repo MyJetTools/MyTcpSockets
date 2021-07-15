@@ -131,7 +131,7 @@ namespace MyTcpSockets
         }
         #endregion
 
-        private Action<BinaryTraceDirection, ITcpContext, ReadOnlyMemory<byte>> _binaryTrace;
+        protected Action<BinaryTraceDirection, ITcpContext, ReadOnlyMemory<byte>> BinaryTrace { get; private set; }
 
         #region Read
         private async Task PublishDataToTrafficReaderAsync(TcpDataReader trafficReader)
@@ -150,7 +150,7 @@ namespace MyTcpSockets
 
                 while (readSize > 0)
                 {
-                    _binaryTrace?.Invoke(BinaryTraceDirection.In, this,
+                    BinaryTrace?.Invoke(BinaryTraceDirection.In, this,
                         buffer.Slice(0, readSize));
 
                     SocketStatistic.WeHaveReceiveEvent(readSize);
@@ -172,7 +172,7 @@ namespace MyTcpSockets
 
                 while (readSize > 0)
                 {
-                    _binaryTrace?.Invoke(BinaryTraceDirection.In, this,
+                    BinaryTrace?.Invoke(BinaryTraceDirection.In, this,
                         new ReadOnlyMemory<byte>(buffer.buffer, buffer.start, readSize));
 
 
@@ -289,7 +289,7 @@ namespace MyTcpSockets
 
             var dataToSend = TcpSerializer.Serialize(data);
             
-            _binaryTrace?.Invoke(BinaryTraceDirection.Out, this, dataToSend);
+            BinaryTrace?.Invoke(BinaryTraceDirection.Out, this, dataToSend);
             
             _deliveryPublisherSubscriber.Publish(dataToSend);
         }
@@ -328,7 +328,7 @@ namespace MyTcpSockets
             SetContextName(TcpClient.Client.RemoteEndPoint?.ToString() ?? "UnknownIP");
             Connected = true;
             SocketStatistic = new SocketStatistic();
-            _binaryTrace = binaryTrace;
+            BinaryTrace = binaryTrace;
             return OnConnectAsync();
         }
     }
@@ -340,6 +340,7 @@ namespace MyTcpSockets
         {
             var pingPacket = GetPingPacket();
             var packageToSend = TcpSerializer.Serialize(pingPacket);
+            BinaryTrace?.Invoke(BinaryTraceDirection.Out, this, packageToSend);
             await SocketStream.WriteAsync(packageToSend);
         }
     }
