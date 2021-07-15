@@ -28,6 +28,12 @@ namespace MyTcpSockets
 
 
         private int _readBufferSize = 1024 * 1024 * 2;
+        
+        private Action<BinaryTraceDirection, ITcpContext, ReadOnlyMemory<byte>> _binaryTrace;
+        public void PlugBinaryPayloadTrace(Action<BinaryTraceDirection, ITcpContext, ReadOnlyMemory<byte>> binaryTrace)
+        {
+            _binaryTrace = binaryTrace;
+        }
 
         public MyServerTcpSocket(IPEndPoint ipEndPoint, int sendBufferSize = 1024*1024)
         {
@@ -116,7 +122,7 @@ namespace MyTcpSockets
             var bufferToSend = SocketMemoryUtils.AllocateByteArray(_sendBufferSize);
 
             await tcpContext.StartAsync(acceptedSocket, _getSerializer(), _lockObject, _log,
-                socket => { _connections.RemoveSocket(socket.Id); }, bufferToSend);
+                socket => { _connections.RemoveSocket(socket.Id); }, bufferToSend, _binaryTrace);
 
             _log.InvokeInfoLog(tcpContext,
                 $"Socket Accepted; Ip:{acceptedSocket.Client.RemoteEndPoint}. Id=" + tcpContext.Id);

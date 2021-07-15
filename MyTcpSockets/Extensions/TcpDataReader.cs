@@ -40,6 +40,7 @@ namespace MyTcpSockets.Extensions
             {
                 await _readWriteSwitcher.WaitUntilWriteModeIsSetAsync(token);
                 var result =  _readBuffer.AllocateBufferToWrite();
+                
                 if (result.Length > 0)
                     return result;
                 _readWriteSwitcher.SetToReadMode();

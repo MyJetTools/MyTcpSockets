@@ -8,6 +8,11 @@ using MyTcpSockets.Extensions;
 namespace MyTcpSockets
 {
 
+    public enum BinaryTraceDirection
+    {
+        In, Out
+    }
+
    public interface ITcpContext
     {
         SocketStatistic SocketStatistic { get; }
@@ -126,10 +131,13 @@ namespace MyTcpSockets
         }
         #endregion
 
+        private Action<BinaryTraceDirection, ITcpContext, ReadOnlyMemory<byte>> _binaryTrace;
 
         #region Read
         private async Task PublishDataToTrafficReaderAsync(TcpDataReader trafficReader)
         {
+            
+            
 
             try
             {
@@ -142,6 +150,9 @@ namespace MyTcpSockets
 
                 while (readSize > 0)
                 {
+                    _binaryTrace?.Invoke(BinaryTraceDirection.In, this,
+                        buffer.Slice(0, readSize));
+
                     SocketStatistic.WeHaveReceiveEvent(readSize);
 
                     trafficReader.CommitWrittenData(readSize);
@@ -161,6 +172,10 @@ namespace MyTcpSockets
 
                 while (readSize > 0)
                 {
+                    _binaryTrace?.Invoke(BinaryTraceDirection.In, this,
+                        new ReadOnlyMemory<byte>(buffer.buffer, buffer.start, readSize));
+
+
                     SocketStatistic.WeHaveReceiveEvent(readSize);
 
                     trafficReader.CommitWrittenData(readSize);
@@ -274,6 +289,8 @@ namespace MyTcpSockets
 
             var dataToSend = TcpSerializer.Serialize(data);
             
+            _binaryTrace?.Invoke(BinaryTraceDirection.Out, this, dataToSend);
+            
             _deliveryPublisherSubscriber.Publish(dataToSend);
         }
         
@@ -295,21 +312,23 @@ namespace MyTcpSockets
         public bool Inited { get; private set; }
 
         protected ISocketLogInvoker Log { get; private set; }
+        
 
         internal ValueTask StartAsync(TcpClient tcpClient, ITcpSerializer<TSocketData> tcpSerializer, object lockObject, ISocketLogInvoker log, 
-            Action<ITcpContext> disconnectedCallback, byte[] deliveryBuffer)
+            Action<ITcpContext> disconnectedCallback, byte[] deliveryBuffer, Action<BinaryTraceDirection, ITcpContext, ReadOnlyMemory<byte>> binaryTrace)
         {
+            TcpClient = tcpClient;
             Log = log;
             _disconnectedCallback = disconnectedCallback;
             _lockObject = lockObject;
             _deliveryBuffer = deliveryBuffer;
             _deliveryPublisherSubscriber = new TcpSocketPublisherSubscriber(_lockObject);
-            TcpClient = tcpClient;
             SocketStream = TcpClient.GetStream();
             TcpSerializer = tcpSerializer;
             SetContextName(TcpClient.Client.RemoteEndPoint?.ToString() ?? "UnknownIP");
             Connected = true;
             SocketStatistic = new SocketStatistic();
+            _binaryTrace = binaryTrace;
             return OnConnectAsync();
         }
     }

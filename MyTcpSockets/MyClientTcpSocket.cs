@@ -63,6 +63,14 @@ namespace MyTcpSockets
             return this;
         }
 
+
+        private Action<BinaryTraceDirection, ITcpContext, ReadOnlyMemory<byte>> _binaryTrace;
+        public void PlugBinaryPayloadTrace(Action<BinaryTraceDirection, ITcpContext, ReadOnlyMemory<byte>> binaryTrace)
+        {
+            _binaryTrace = binaryTrace;
+        }
+        
+        
         public MyClientTcpSocket<TSocketData> RegisterTcpSerializerFactory(
             Func<ITcpSerializer<TSocketData>> socketSerializerFactory)
         {
@@ -90,7 +98,8 @@ namespace MyTcpSockets
                 _lockObject,
                 _log,
                 null, 
-                _deliveryBuffer);
+                _deliveryBuffer,
+                _binaryTrace);
 
             _log.InvokeInfoLog(clientTcpContext, "Connected. Id=" + clientTcpContext.Id);
 
