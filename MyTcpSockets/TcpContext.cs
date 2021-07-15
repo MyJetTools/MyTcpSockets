@@ -307,7 +307,7 @@ namespace MyTcpSockets
             TcpClient = tcpClient;
             SocketStream = TcpClient.GetStream();
             TcpSerializer = tcpSerializer;
-            SetContextName(TcpClient.Client.RemoteEndPoint.ToString());
+            SetContextName(TcpClient.Client.RemoteEndPoint?.ToString() ?? "UnknownIP");
             Connected = true;
             SocketStatistic = new SocketStatistic();
             return OnConnectAsync();

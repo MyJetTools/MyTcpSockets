@@ -154,7 +154,7 @@ namespace MyTcpSockets
                 }
                 catch (Exception ex)
                 {
-                    _log.InvokeInfoLog(null, "Error accepting socket: " + ex.Message);
+                    _log.InvokeExceptionLog(null, ex, true);
                 }
             }
 
