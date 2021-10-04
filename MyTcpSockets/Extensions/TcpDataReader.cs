@@ -49,7 +49,7 @@ namespace MyTcpSockets.Extensions
                 pos += readAmount;
             }
 
-            return buffer;
+            return buffer.Slice(0, size);
         }
 
 
