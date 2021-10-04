@@ -22,8 +22,8 @@
       <Compile Include="..\MyTcpSockets\Connections.cs">
         <Link>Connections.cs</Link>
       </Compile>
-      <Compile Include="..\MyTcpSockets\Extensions\ITcpDataPipe.cs">
-        <Link>Extensions\ITcpDataPipe.cs</Link>
+      <Compile Include="..\MyTcpSockets\Extensions\ITcpDataReader.cs">
+        <Link>Extensions\ITcpDataReader.cs</Link>
       </Compile>
       <Compile Include="..\MyTcpSockets\Extensions\PublisherSubscriber.cs">
         <Link>Extensions\PublisherSubscriber.cs</Link>
@@ -31,17 +31,11 @@
       <Compile Include="..\MyTcpSockets\Extensions\ReadOnlyMemoryUtils.cs">
         <Link>Extensions\ReadOnlyMemoryUtils.cs</Link>
       </Compile>
-      <Compile Include="..\MyTcpSockets\Extensions\ReadWriteSwitcher.cs">
-        <Link>Extensions\ReadWriteSwitcher.cs</Link>
-      </Compile>
-      <Compile Include="..\MyTcpSockets\Extensions\TcpDataPiece.cs">
-        <Link>Extensions\TcpDataPiece.cs</Link>
-      </Compile>
-      <Compile Include="..\MyTcpSockets\Extensions\TcpDataPieceUtils.cs">
-        <Link>Extensions\TcpDataPieceUtils.cs</Link>
-      </Compile>
       <Compile Include="..\MyTcpSockets\Extensions\TcpDataReader.cs">
-        <Link>TcpDataReader.cs</Link>
+        <Link>Extensions\TcpDataReader.cs</Link>
+      </Compile>
+      <Compile Include="..\MyTcpSockets\Extensions\TcpDataReaderUtils.cs">
+        <Link>Extensions\TcpDataReaderUtils.cs</Link>
       </Compile>
       <Compile Include="..\MyTcpSockets\HostPortUtils.cs">
         <Link>HostPortUtils.cs</Link>

@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using MyTcpSockets.Extensions;
 using NUnit.Framework;
 
 namespace MyTcpSockets.Tests
@@ -43,35 +40,7 @@ namespace MyTcpSockets.Tests
             SocketMemoryUtils.AllocateByteArray = size => GC.AllocateUninitializedArray<byte>(size);
         }
 
-        public static async Task NewPackageAsync(this TcpDataReader tcpDataReader, byte[] data)
-        {
-
-            var remainSize = data.Length;
-            var pos = 0;
-
-            while (remainSize>0)
-            {
-                var cancellationToken = new CancellationTokenSource();
-
-                var buf = await tcpDataReader.AllocateBufferToWriteAsync(cancellationToken.Token);
-
-                var copySize = buf.Length < remainSize ? buf.Length : remainSize;
-                
-                new ReadOnlyMemory<byte>(data, pos, copySize).CopyTo(buf);
-                tcpDataReader.CommitWrittenData(copySize);
-                pos += copySize;
-                remainSize -= copySize;
-            }
-        }
-
-        public static async Task NewPackagesAsync(this TcpDataReader tcpDataReader, params byte[][] dataChunks)
-        {
-            foreach (var dataChunk in dataChunks)
-            {
-                await NewPackageAsync(tcpDataReader, dataChunk);
-            }
-        }
-
+ 
         public static void Print(this ReadOnlyMemory<byte> src)
         {
             Console.Write("[");

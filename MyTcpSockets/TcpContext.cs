@@ -28,6 +28,8 @@ namespace MyTcpSockets
 
         private object _lockObject;
         public TcpClient TcpClient { get; protected set; }
+
+        private TcpDataReader _tcpDataReader;
         public Stream SocketStream { get; private set; }
         
         public long Id { get; internal set; }
@@ -134,86 +136,19 @@ namespace MyTcpSockets
         protected Action<BinaryTraceDirection, ITcpContext, ReadOnlyMemory<byte>> BinaryTrace { get; private set; }
 
         #region Read
-        private async Task PublishDataToTrafficReaderAsync(TcpDataReader trafficReader)
-        {
-            
-            
-
-            try
-            {
-#if NETSTANDARD2_1
-                var buffer = await trafficReader.AllocateBufferToWriteAsync(_cancellationToken.Token);
-
-                var readSize =
-                    await SocketStream.ReadAsync(buffer, _cancellationToken.Token);
-                
-
-                while (readSize > 0)
-                {
-                    BinaryTrace?.Invoke(BinaryTraceDirection.In, this,
-                        buffer.Slice(0, readSize));
-
-                    SocketStatistic.WeHaveReceiveEvent(readSize);
-
-                    trafficReader.CommitWrittenData(readSize);
-
-                    buffer = await trafficReader.AllocateBufferToWriteAsync(_cancellationToken.Token);
-
-                    readSize =
-                        await SocketStream.ReadAsync(buffer, _cancellationToken.Token);
-                }
-#else
 
 
-                var buffer = await trafficReader.AllocateBufferToWriteLegacyAsync(_cancellationToken.Token);
-                
-                var readSize =
-                    await SocketStream.ReadAsync(buffer.buffer, buffer.start, buffer.len, _cancellationToken.Token);
-
-                while (readSize > 0)
-                {
-                    BinaryTrace?.Invoke(BinaryTraceDirection.In, this,
-                        new ReadOnlyMemory<byte>(buffer.buffer, buffer.start, readSize));
-
-
-                    SocketStatistic.WeHaveReceiveEvent(readSize);
-
-                    trafficReader.CommitWrittenData(readSize);
-
-                    buffer = await trafficReader.AllocateBufferToWriteLegacyAsync(_cancellationToken.Token);
-
-                    readSize =
-                        await SocketStream.ReadAsync(buffer.buffer, buffer.start, buffer.len, _cancellationToken.Token);
-                }           
-#endif
-            }
-            catch (Exception e)
-            {
-                Log.InvokeExceptionLog(this, e, true);
-            }
-            finally
-            {
-                Log.InvokeInfoLog(this, "Disconnected from Traffic Reader Loop");
-                trafficReader.Stop();
-            }
-
-        }
-
-        private async Task ReadLoopAsync(int bufferSize)
+        private async Task ReadLoopAsync()
         {
             try
             {
-                var trafficReader = new TcpDataReader(bufferSize);
-
-                var trafficWriterTask = PublishDataToTrafficReaderAsync(trafficReader);
-
 
                 while (TcpClient.Connected)
                 {
                     try
                     {
                         var incomingDataPacket =
-                            await TcpSerializer.DeserializeAsync(trafficReader, _cancellationToken.Token);
+                            await TcpSerializer.DeserializeAsync(_tcpDataReader, _cancellationToken.Token);
                         await HandleIncomingDataAsync(incomingDataPacket);
                     }
                     catch (Exception e)
@@ -225,7 +160,6 @@ namespace MyTcpSockets
         
                 }
 
-                await trafficWriterTask;
             }
             catch (Exception e)
             {
@@ -238,10 +172,10 @@ namespace MyTcpSockets
             }
         }
 
-        internal void StartReadThread(int bufferSize)
+        internal void StartReadThread(int readBufferSize)
         {
-            Task.Run(()=>ReadLoopAsync(bufferSize));
-            Task.Run(StartSendDeliveryTaskAsync);
+            _tcpDataReader = new TcpDataReader(new IncomingTcpClientTrafficReader(TcpClient), readBufferSize);
+            Task.Run(ReadLoopAsync);
         }
         #endregion
 
@@ -314,7 +248,7 @@ namespace MyTcpSockets
         protected ISocketLogInvoker Log { get; private set; }
         
 
-        internal ValueTask StartAsync(TcpClient tcpClient, ITcpSerializer<TSocketData> tcpSerializer, object lockObject, ISocketLogInvoker log, 
+        internal ValueTask StartAsync(TcpClient tcpClient,  ITcpSerializer<TSocketData> tcpSerializer, object lockObject, ISocketLogInvoker log, 
             Action<ITcpContext> disconnectedCallback, byte[] deliveryBuffer, Action<BinaryTraceDirection, ITcpContext, ReadOnlyMemory<byte>> binaryTrace)
         {
             TcpClient = tcpClient;
