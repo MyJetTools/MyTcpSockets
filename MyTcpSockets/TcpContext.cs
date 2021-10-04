@@ -174,7 +174,7 @@ namespace MyTcpSockets
 
         internal void StartReadThread(int readBufferSize)
         {
-            _tcpDataReader = new TcpDataReader(new IncomingTcpClientTrafficReader(TcpClient), readBufferSize);
+            _tcpDataReader = new TcpDataReader(new IncomingTcpClientTrafficReader(TcpClient, SocketStatistic), readBufferSize);
             Task.Run(ReadLoopAsync);
             Task.Run(StartSendDeliveryTaskAsync);
         }

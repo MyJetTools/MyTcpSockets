@@ -14,13 +14,15 @@ namespace MyTcpSockets.Extensions
 
     public class IncomingTcpClientTrafficReader : IIncomingTcpTrafficReader
     {
+        private readonly SocketStatistic _socketStatistic;
 
         private readonly byte[] _byteBuffer = {0};
 
         private readonly NetworkStream _networkStream;
 
-        public IncomingTcpClientTrafficReader(TcpClient tcpClient)
+        public IncomingTcpClientTrafficReader(TcpClient tcpClient, SocketStatistic socketStatistic)
         {
+            _socketStatistic = socketStatistic;
             _networkStream = tcpClient.GetStream();
         }
         
@@ -34,6 +36,7 @@ namespace MyTcpSockets.Extensions
                 throw new Exception($"Disconnected. Read byte result is {result}");
             }
 
+            _socketStatistic.WeHaveReceiveEvent(1);
             return _byteBuffer[0];
         }
 
@@ -46,6 +49,8 @@ namespace MyTcpSockets.Extensions
             {
                 throw new Exception($"Disconnected. Read ByteArray result is {result}");
             }
+
+            _socketStatistic.WeHaveReceiveEvent(result);
             
             bytesToWrite.CopyTo(buffer);
 
