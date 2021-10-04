@@ -176,6 +176,7 @@ namespace MyTcpSockets
         {
             _tcpDataReader = new TcpDataReader(new IncomingTcpClientTrafficReader(TcpClient), readBufferSize);
             Task.Run(ReadLoopAsync);
+            Task.Run(StartSendDeliveryTaskAsync);
         }
         #endregion
 

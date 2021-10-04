@@ -84,11 +84,6 @@ namespace MyTcpSockets.Extensions
             _readerAsSequence.CompactBuffer();
 
             return new ValueTask<ReadOnlyMemory<byte>>(ReadFromSocket(sequence, token));
-
-
-
-
-     
         }
         
     }
